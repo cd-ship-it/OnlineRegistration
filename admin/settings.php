@@ -21,6 +21,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $max_kids_per_registration = (int) ($_POST['max_kids_per_registration'] ?? 10);
     $registration_open = isset($_POST['registration_open']) ? '1' : '0';
     $consent_content = trim($_POST['consent_content'] ?? '');
+    $event_description = trim($_POST['event_description'] ?? '');
 
     if ($price_per_kid_dollars < 0) $errors[] = 'Price per kid cannot be negative.';
     if ($max_kids_per_registration < 1) $errors[] = 'Max kids per registration must be at least 1.';
@@ -37,6 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->execute(['max_kids_per_registration', (string) $max_kids_per_registration]);
         $stmt->execute(['registration_open', $registration_open]);
         $stmt->execute(['consent_content', $consent_content]);
+        $stmt->execute(['event_description', $event_description]);
         $message = 'Settings saved.';
     }
 }
@@ -52,6 +54,7 @@ $multi_kid_min_count = $settings['multi_kid_min_count'] ?? '2';
 $max_kids_per_registration = $settings['max_kids_per_registration'] ?? '10';
 $registration_open = ($settings['registration_open'] ?? '1') === '1';
 $consent_content = $settings['consent_content'] ?? '';
+$event_description = $settings['event_description'] ?? '';
 
 layout_head('Admin – Settings');
 ?>
@@ -74,6 +77,13 @@ layout_head('Admin – Settings');
   <?php endif; ?>
 
   <form method="post" action="" class="space-y-6">
+    <div class="card">
+      <h2 class="text-lg font-semibold mb-4">Event Description</h2>
+      <p class="text-sm text-gray-600 mb-2">This description appears on the registration page. Include date, time, age requirements, and any other event details.</p>
+      <label for="event_description" class="block text-sm font-medium text-gray-700 mb-1">Event Description</label>
+      <textarea id="event_description" name="event_description" rows="6" class="input-field w-full resize-y" placeholder="e.g.&#10;At Rainforest Falls, kids explore the nature of God with awesome Bible-learning experiences.&#10;&#10;DATE: JUNE 15-19 – 9 am - 12:30 pm&#10;AGE: Age 4 as of 6/15/2025 through entering 5th grade in Fall 2026"><?= htmlspecialchars($event_description) ?></textarea>
+    </div>
+
     <div class="card">
       <h2 class="text-lg font-semibold mb-4">Pricing</h2>
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">

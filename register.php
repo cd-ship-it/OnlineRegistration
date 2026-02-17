@@ -333,9 +333,25 @@ $hero_img = rtrim(parse_url(APP_URL, PHP_URL_PATH) ?: '', '/') . '/img/image.web
       Monday, Jun 15 to Friday, Jun 19 from 9 am to 12:30 pm PDT
     </p>
     <div class="card text-left">
-      <p class="text-gray-700 mb-4">At Rainforest Falls, kids explore the nature of God with awesome Bible-learning experiences.</p>
-      <p class="font-semibold text-gray-900 py-2">DATE: JUNE 15-19 – 9 am - 12:30 pm</p>
-      <p class="font-semibold text-gray-900 py-2">AGE: Age 4 as of 6/15/2025 through entering 5th grade in Fall 2026</p>
+      <?php
+      $event_description = get_setting($pdo, 'event_description', '');
+      if ($event_description !== '') {
+          // Split by newlines and display each line as a paragraph
+          $lines = array_filter(array_map('trim', explode("\n", $event_description)));
+          foreach ($lines as $line) {
+              if (stripos($line, 'DATE:') === 0 || stripos($line, 'AGE:') === 0) {
+                  echo '<p class="font-semibold text-gray-900 py-2">' . htmlspecialchars($line) . '</p>';
+              } else {
+                  echo '<p class="text-gray-700 mb-4">' . htmlspecialchars($line) . '</p>';
+              }
+          }
+      } else {
+          // Fallback to default if not set
+          echo '<p class="text-gray-700 mb-4">At Rainforest Falls, kids explore the nature of God with awesome Bible-learning experiences.</p>';
+          echo '<p class="font-semibold text-gray-900 py-2">DATE: JUNE 15-19 – 9 am - 12:30 pm</p>';
+          echo '<p class="font-semibold text-gray-900 py-2">AGE: Age 4 as of 6/15/2025 through entering 5th grade in Fall 2026</p>';
+      }
+      ?>
     </div>
   </section>
 
