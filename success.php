@@ -42,7 +42,8 @@ if ($session && $session->payment_status === 'paid' && !empty($session->metadata
                 if (!empty($k['age'])) $line .= ' (age ' . (int)$k['age'] . ')';
                 $kids_list[] = $line;
             }
-            $total_str = format_money($registration['total_amount_cents']);
+            $total_dollars = ((int) $registration['total_amount_cents']) / 100.0;
+            $total_str = format_money($total_dollars);
             $body = "Hi " . $parent_name . ",\n\n"
                 . "Thank you for registering for Rainforest Falls VBS 2026 at Crosspoint Church. Your registration and payment are complete.\n\n"
                 . "REGISTRATION DETAILS\n"
@@ -88,7 +89,7 @@ layout_head('Thank you');
     <p><span class="text-gray-600">Parent:</span> <?= htmlspecialchars($registration['parent_first_name'] . ' ' . $registration['parent_last_name']) ?></p>
     <p><span class="text-gray-600">Email:</span> <?= htmlspecialchars($registration['email']) ?></p>
     <?php if (!empty($registration['phone'])): ?><p><span class="text-gray-600">Phone:</span> <?= htmlspecialchars($registration['phone']) ?></p><?php endif; ?>
-    <p><span class="text-gray-600">Total paid:</span> <?= format_money($registration['total_amount_cents']) ?></p>
+    <p><span class="text-gray-600">Total paid:</span> <?= format_money(((int) $registration['total_amount_cents']) / 100.0) ?></p>
     <div>
       <span class="text-gray-600">Children registered:</span>
       <ul class="list-disc list-inside mt-1">
@@ -106,6 +107,10 @@ layout_head('Thank you');
   </div>
   <?php endif; ?>
   <p class="text-center text-gray-500 text-sm mt-8"><a href="<?= APP_URL ?>/register" class="text-indigo-600 hover:underline">Register another</a></p>
+
+  <div class="mt-10 flex justify-center">
+    <img src="https://crosspointchurchsv.org/branding/logos/Xpt-ID2015-1_1400x346.png" alt="Crosspoint Church" class="max-w-xs sm:max-w-md h-auto" width="350" height="86">
+  </div>
 </div>
 </body>
 </html>

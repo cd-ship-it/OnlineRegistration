@@ -111,7 +111,7 @@ layout_head('Consent Form');
     <div class="mt-10 pt-8 border-t border-gray-200 flex flex-col items-center gap-3">
       <p class="text-sm font-medium text-gray-500">Secured and powered by Stripe</p>
       <a href="https://stripe.com" target="_blank" rel="noopener noreferrer" class="inline-flex items-center text-gray-400 hover:text-gray-600 transition" aria-label="Stripe — payment processing">
-        <img src="img/stripe-badge.png" alt="" width="120" height="40" class="h-10 w-auto object-contain">
+        <img src="img/blurple.svg" alt="" width="120" height="40" class="h-10 w-auto object-contain">
       </a>
     </div>
   </form>

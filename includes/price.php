@@ -1,7 +1,8 @@
 <?php
 /**
- * Compute total price in cents for a given number of kids and optional registration date.
- * Uses settings: price_per_kid_cents, early_bird_*, multi_kid_discount_percent, multi_kid_min_count.
+ * Compute total price in dollars for a given number of kids and optional registration date.
+ * Uses settings: price_per_kid (regular), early_bird_* (dates + early_bird_price_per_kid), multi_kid_min_count + multi_kid_price_per_kid.
+ * Discounts are the actual price per kid in that tier. Stored in DB as _cents; we convert at boundary.
  */
 function get_settings(PDO $pdo) {
     $stmt = $pdo->query("SELECT `key`, `value` FROM settings");
@@ -19,34 +20,31 @@ function get_setting(PDO $pdo, $key, $default = null) {
     return $row ? $row['value'] : $default;
 }
 
-function compute_total_cents(PDO $pdo, $num_kids, $registration_date = null) {
+function compute_total_dollars(PDO $pdo, $num_kids, $registration_date = null) {
     if ($num_kids < 1) {
-        return 0;
+        return 0.0;
     }
     $settings = get_settings($pdo);
-    $price_per_kid = (int) ($settings['price_per_kid_cents'] ?? 0);
+    $price_per_kid_dollars = ((int) ($settings['price_per_kid_cents'] ?? 0)) / 100.0;
     $early_start = $settings['early_bird_start_date'] ?? '';
     $early_end = $settings['early_bird_end_date'] ?? '';
-    $early_discount_percent = (float) ($settings['early_bird_discount_percent'] ?? 0);
-    $multi_discount_percent = (float) ($settings['multi_kid_discount_percent'] ?? 0);
+    $early_bird_price_per_kid_dollars = ((int) ($settings['early_bird_price_per_kid_cents'] ?? 0)) / 100.0;
+    $multi_kid_price_per_kid_dollars = ((int) ($settings['multi_kid_price_per_kid_cents'] ?? 0)) / 100.0;
     $multi_min = (int) ($settings['multi_kid_min_count'] ?? 2);
 
     $date = $registration_date ?: date('Y-m-d');
-    $subtotal = $price_per_kid * $num_kids;
 
-    if ($early_start && $early_end && $early_discount_percent > 0) {
-        if ($date >= $early_start && $date <= $early_end) {
-            $subtotal = $subtotal * (1 - $early_discount_percent / 100);
-        }
+    if ($early_start && $early_end && $early_bird_price_per_kid_dollars > 0 && $date >= $early_start && $date <= $early_end) {
+        $subtotal_dollars = $early_bird_price_per_kid_dollars * $num_kids;
+    } elseif ($num_kids >= $multi_min && $multi_kid_price_per_kid_dollars > 0) {
+        $subtotal_dollars = $multi_kid_price_per_kid_dollars * $num_kids;
+    } else {
+        $subtotal_dollars = $price_per_kid_dollars * $num_kids;
     }
 
-    if ($num_kids >= $multi_min && $multi_discount_percent > 0) {
-        $subtotal = $subtotal * (1 - $multi_discount_percent / 100);
-    }
-
-    return (int) round($subtotal);
+    return round($subtotal_dollars, 2);
 }
 
-function format_money($cents, $currency = 'usd') {
-    return '$' . number_format($cents / 100, 2);
+function format_money($dollars, $currency = 'usd') {
+    return '$' . number_format((float) $dollars, 2);
 }

@@ -24,15 +24,16 @@ if ($csv) {
     header('Content-Type: text/csv; charset=utf-8');
     header('Content-Disposition: attachment; filename="vbs-registrations-' . date('Y-m-d') . '.csv"');
     $out = fopen('php://output', 'w');
-    fputcsv($out, ['ID', 'Parent name', 'Email', 'Phone', 'Kids', 'Total (cents)', 'Status', 'Created']);
+    fputcsv($out, ['ID', 'Parent name', 'Email', 'Phone', 'Kids', 'Total', 'Status', 'Created']);
     foreach ($registrations as $r) {
+        $total_dollars = ((int) $r['total_amount_cents']) / 100.0;
         fputcsv($out, [
             $r['id'],
             $r['parent_first_name'] . ' ' . $r['parent_last_name'],
             $r['email'],
             $r['phone'],
             $r['kid_count'],
-            $r['total_amount_cents'],
+            number_format($total_dollars, 2, '.', ''),
             $r['status'],
             $r['created_at'],
         ]);
@@ -77,7 +78,7 @@ layout_head('Admin – Registrations');
           <td class="px-4 py-3"><?= htmlspecialchars($r['parent_first_name'] . ' ' . $r['parent_last_name']) ?></td>
           <td class="px-4 py-3"><?= htmlspecialchars($r['email']) ?></td>
           <td class="px-4 py-3"><?= (int) $r['kid_count'] ?></td>
-          <td class="px-4 py-3"><?= format_money($r['total_amount_cents']) ?></td>
+          <td class="px-4 py-3"><?= format_money(((int) $r['total_amount_cents']) / 100.0) ?></td>
           <td class="px-4 py-3"><span class="px-2 py-0.5 rounded text-xs <?= $r['status'] === 'paid' ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-700' ?>"><?= htmlspecialchars($r['status']) ?></span></td>
           <td class="px-4 py-3 text-sm text-gray-600"><?= htmlspecialchars($r['created_at']) ?></td>
         </tr>

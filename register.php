@@ -27,8 +27,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $kid_rows = $data['kid_rows'];
     $payment_error = null;
     try {
-        $total_cents = compute_total_cents($pdo, count($kid_rows));
-        if ($total_cents < 50) {
+        $total_dollars = compute_total_dollars($pdo, count($kid_rows));
+        if ($total_dollars < 0.50) {
             header('Location: ' . APP_URL . '/register', true, 302);
             exit;
         }
@@ -50,7 +50,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             'emergency_contact_relationship' => $emergency_contact_relationship,
             'consent_accepted' => 1,
             'status' => 'draft',
-            'total_amount_cents' => $total_cents,
+            'total_amount_cents' => (int) round($total_dollars * 100),
         ];
         $cols = [];
         $vals = [];
@@ -99,7 +99,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 'price_data' => [
                     'currency' => get_setting($pdo, 'currency', 'usd'),
                     'product_data' => ['name' => 'VBS Registration - ' . count($kid_rows) . ' kid(s)'],
-                    'unit_amount' => (int) round($total_cents / count($kid_rows)),
+                    'unit_amount' => (int) round($total_dollars * 100 / count($kid_rows)),
                 ],
                 'quantity' => count($kid_rows),
             ]],
@@ -133,14 +133,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $emergency_contact_name = trim($_POST['emergency_contact_name'] ?? '') ?: null;
     $emergency_contact_phone = trim($_POST['emergency_contact_phone'] ?? '') ?: null;
     $emergency_contact_relationship = trim($_POST['emergency_contact_relationship'] ?? '') ?: null;
-    $consent = !empty($_POST['consent']);
     $kids = $_POST['kids'] ?? [];
 
     if ($parent_first === '') $errors[] = 'Parent first name is required.';
     if ($parent_last === '') $errors[] = 'Parent last name is required.';
     if ($email === '') $errors[] = 'Email is required.';
     elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) $errors[] = 'Please enter a valid email.';
-    if (!$consent) $errors[] = 'You must accept the consent form.';
 
     $kid_rows = [];
     foreach ($kids as $i => $k) {
@@ -173,8 +171,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if (empty($errors)) {
-        $total_cents = compute_total_cents($pdo, count($kid_rows));
-        if ($total_cents < 50) {
+        $total_dollars = compute_total_dollars($pdo, count($kid_rows));
+        if ($total_dollars < 0.50) {
             $errors[] = 'Minimum charge is $0.50. Please check admin pricing settings.';
         } else {
             $_SESSION['vbs_registration_data'] = [
@@ -195,10 +193,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$price_per_kid = (int) get_setting($pdo, 'price_per_kid_cents', 5000);
+$price_per_kid_dollars = ((int) get_setting($pdo, 'price_per_kid_cents', 5000)) / 100.0;
 $registration_open = get_setting($pdo, 'registration_open', '1');
-$consent_form_url = get_setting($pdo, 'consent_form_url', '#');
-
 // Form values: from POST (after validation errors) or from session (when returning from consent)
 $form = [
     'parent_first_name' => '',
@@ -404,13 +400,6 @@ $hero_img = rtrim(parse_url(APP_URL, PHP_URL_PATH) ?: '', '/') . '/img/image.web
           <input type="text" id="emergency_contact_relationship" name="emergency_contact_relationship" maxlength="50" value="<?= htmlspecialchars($form['emergency_contact_relationship']) ?>" class="input-field">
         </div>
       </div>
-    </div>
-
-    <div class="card">
-      <label class="flex items-start gap-3 cursor-pointer">
-        <input type="checkbox" name="consent" required class="mt-1 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
-        <span class="text-gray-700">I agree to the <a href="<?= htmlspecialchars($consent_form_url) ?>" class="text-indigo-600 underline" target="_blank" rel="noopener">consent form</a>.</span>
-      </label>
     </div>
 
     <div class="flex flex-col sm:flex-row gap-4 justify-between items-center">
