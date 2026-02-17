@@ -28,8 +28,8 @@ if ($event->type === 'checkout.session.completed') {
     $session = $event->data->object;
     $reg_id = isset($session->metadata->registration_id) ? (int) $session->metadata->registration_id : 0;
     if ($reg_id > 0) {
-        $stmt = $pdo->prepare("UPDATE registrations SET status = 'paid', stripe_session_id = ? WHERE id = ? AND status = 'draft'");
-        $stmt->execute([$session->id, $reg_id]);
+        $stmt = $pdo->prepare("UPDATE registrations SET status = 'paid', stripe_session_id = ?, updated_at = ? WHERE id = ? AND status = 'draft'");
+        $stmt->execute([$session->id, date('Y-m-d H:i:s'), $reg_id]);
     }
 }
 

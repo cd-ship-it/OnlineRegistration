@@ -20,16 +20,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $multi_kid_min_count = (int) ($_POST['multi_kid_min_count'] ?? 2);
     $max_kids_per_registration = (int) ($_POST['max_kids_per_registration'] ?? 10);
     $registration_open = isset($_POST['registration_open']) ? '1' : '0';
+    $consent_content = trim($_POST['consent_content'] ?? '');
 
     if ($price_per_kid_dollars < 0) $errors[] = 'Price per kid cannot be negative.';
     if ($max_kids_per_registration < 1) $errors[] = 'Max kids per registration must be at least 1.';
 
     if (empty($errors)) {
-        $keys = [
-            'price_per_kid_cents', 'currency', 'early_bird_start_date', 'early_bird_end_date',
-            'early_bird_price_per_kid_cents', 'multi_kid_price_per_kid_cents', 'multi_kid_min_count',
-            'max_kids_per_registration', 'registration_open'
-        ];
         $stmt = $pdo->prepare("INSERT INTO settings (`key`, `value`) VALUES (?, ?) ON DUPLICATE KEY UPDATE `value` = VALUES(`value`)");
         $stmt->execute(['price_per_kid_cents', (string) (int) round($price_per_kid_dollars * 100)]);
         $stmt->execute(['currency', $currency]);
@@ -40,6 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->execute(['multi_kid_min_count', (string) $multi_kid_min_count]);
         $stmt->execute(['max_kids_per_registration', (string) $max_kids_per_registration]);
         $stmt->execute(['registration_open', $registration_open]);
+        $stmt->execute(['consent_content', $consent_content]);
         $message = 'Settings saved.';
     }
 }
@@ -54,6 +51,7 @@ $multi_kid_price_per_kid_dollars = ((int) ($settings['multi_kid_price_per_kid_ce
 $multi_kid_min_count = $settings['multi_kid_min_count'] ?? '2';
 $max_kids_per_registration = $settings['max_kids_per_registration'] ?? '10';
 $registration_open = ($settings['registration_open'] ?? '1') === '1';
+$consent_content = $settings['consent_content'] ?? '';
 
 layout_head('Admin – Settings');
 ?>
@@ -126,6 +124,14 @@ layout_head('Admin – Settings');
     </div>
 
     <div class="card">
+      <h2 class="text-lg font-semibold mb-4">Consent items</h2>
+      <p class="text-sm text-gray-600 mb-2">Enter the consent text shown to parents during registration. <strong>Each paragraph is one consent item</strong> (parents must check a box for each). Separate paragraphs with a blank line.</p>
+      <label for="consent_content" class="block text-sm font-medium text-gray-700 mb-1">Consent content</label>
+      <textarea id="consent_content" name="consent_content" rows="16" class="input-field w-full font-mono text-sm resize-y" placeholder="e.g.&#10;&#10;Consent for Activity Participation&#10;I grant permission for XXXX to participate...&#10;&#10;Consent for Transportation&#10;I grant permission for my child to be transported..."><?= htmlspecialchars($consent_content) ?></textarea>
+      <p class="text-sm text-gray-500 mt-2">The Photo &amp; Video Release (Section 5) is always shown at the end of the consent form and cannot be edited here.</p>
+    </div>
+
+    <div class="card">
       <h2 class="text-lg font-semibold mb-4">Other</h2>
       <div class="space-y-4">
         <div>
@@ -148,5 +154,6 @@ layout_head('Admin – Settings');
     3 kids = <?= format_money(compute_total_dollars($pdo, 3)) ?>.
   </div>
 </div>
+<?php layout_footer(); ?>
 </body>
 </html>

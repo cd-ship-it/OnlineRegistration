@@ -8,6 +8,7 @@ RewriteCond %{REQUEST_FILENAME} !-d
 
 # Public clean URLs
 RewriteRule ^register$ register.php [L]
+RewriteRule ^add-kids$ add-kids.php [L]
 RewriteRule ^consent$ consent.php [L]
 RewriteRule ^success$ success.php [L]
 RewriteRule ^cancel$ cancel.php [L]
@@ -17,6 +18,7 @@ RewriteRule ^stripe-webhook$ stripe-webhook.php [L]
 RewriteRule ^admin$ admin/index.php [L]
 RewriteRule ^admin/settings$ admin/settings.php [L]
 RewriteRule ^admin/registrations$ admin/registrations.php [L]
+RewriteRule ^admin/registrations/view$ admin/registration-view.php [L]
 RewriteRule ^admin/logout$ admin/logout.php [L]
 
 # Optional: uncomment to redirect *.php URLs to clean URLs

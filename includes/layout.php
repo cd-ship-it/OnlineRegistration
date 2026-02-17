@@ -40,3 +40,17 @@ function layout_head($title = 'VBS Registration') {
 <body class="min-h-screen font-sans text-gray-900 bg-gradient-to-br from-orange-50 via-amber-50 to-sky-100">
 <?php
 }
+
+function layout_footer() {
+    $year = date('Y');
+    ?>
+
+  <div class="mt-10 flex justify-center">
+    <img src="https://crosspointchurchsv.org/branding/logos/Xpt-ID2015-1_1400x346.png" alt="Crosspoint Church" class="max-w-xs sm:max-w-md h-auto" width="250">
+  </div>
+<footer class="mt-auto py-6 text-center text-sm text-gray-500">
+  &copy; <?= $year ?> <a href="https://crosspointchurchsv.org" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:underline">Crosspoint Church</a>. All rights reserved.
+  <p><a target="_blank" rel="noopener noreferrer" href="<?= defined('APP_URL') ? rtrim(APP_URL, '/') : '' ?>/privacy_summary.html" class="text-indigo-600 hover:underline">Our Privacy Promise</a>
+</footer>
+<?php
+}

@@ -45,5 +45,6 @@ layout_head('Admin Login');
     <p class="mt-4 text-center text-sm text-gray-500"><a href="<?= APP_URL ?>/register" class="text-indigo-600 hover:underline">Back to registration</a></p>
   </div>
 </div>
+<?php layout_footer(); ?>
 </body>
 </html>

@@ -23,6 +23,9 @@ foreach ($lines as $line) {
     }
 }
 
+// Force Los Angeles time for all PHP date/time — overrides server timezone so DB gets correct timestamps
+date_default_timezone_set('America/Los_Angeles');
+
 function env($key, $default = null) {
     $v = getenv($key);
     if ($v === false || $v === '') {

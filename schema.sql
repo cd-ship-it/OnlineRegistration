@@ -12,10 +12,15 @@ CREATE TABLE IF NOT EXISTS `registrations` (
   `phone` varchar(50) DEFAULT NULL,
   `address` text,
   `home_church` varchar(255) DEFAULT NULL,
+  `alternative_pickup_name` varchar(100) DEFAULT NULL,
+  `alternative_pickup_phone` varchar(50) DEFAULT NULL,
   `emergency_contact_name` varchar(100) DEFAULT NULL,
   `emergency_contact_phone` varchar(50) DEFAULT NULL,
   `emergency_contact_relationship` varchar(50) DEFAULT NULL,
   `consent_accepted` tinyint(1) NOT NULL DEFAULT 0,
+  `digital_signature` varchar(200) DEFAULT NULL,
+  `consent_agreed_at` datetime DEFAULT NULL,
+  `photo_consent` varchar(10) DEFAULT NULL,
   `stripe_session_id` varchar(255) DEFAULT NULL,
   `status` varchar(20) NOT NULL DEFAULT 'draft',
   `total_amount_cents` int unsigned NOT NULL DEFAULT 0,
@@ -37,6 +42,7 @@ CREATE TABLE IF NOT EXISTS `registration_kids` (
   `gender` varchar(10) DEFAULT NULL,
   `date_of_birth` date DEFAULT NULL,
   `last_grade_completed` varchar(20) DEFAULT NULL,
+  `t_shirt_size` varchar(20) DEFAULT NULL,
   `emergency_contact_name` varchar(100) DEFAULT NULL,
   `emergency_contact_phone` varchar(50) DEFAULT NULL,
   `emergency_contact_relationship` varchar(50) DEFAULT NULL,
@@ -66,7 +72,8 @@ INSERT INTO `settings` (`key`, `value`) VALUES
   ('multi_kid_min_count', '2'),
   ('max_kids_per_registration', '10'),
   ('consent_form_url', '#'),
-  ('registration_open', '1')
+  ('registration_open', '1'),
+  ('consent_content', '')
 ON DUPLICATE KEY UPDATE `key` = `key`;
 
 -- Admin user for login (admin / password)

@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Our Privacy Promise — Crosspoint Church VBS</title>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --navy:   #1F4E79;
+      --sky:    #4A90C4;
+      --cream:  #FFFDF7;
+      --warm:   #FFF3E0;
+      --green:  #E8F5E9;
+      --blue:   #E3F2FD;
+      --yellow: #FFFDE7;
+      --text:   #2C3E50;
+      --muted:  #7F8C8D;
+      --radius: 18px;
+    }
+
+    body {
+      font-family: 'Nunito', sans-serif;
+      background: var(--cream);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 0;
+    }
+
+    /* ── WAVY TOP BANNER ── */
+    .banner {
+      background: var(--navy);
+      padding: 48px 32px 80px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .banner::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at 20% 50%, rgba(74,144,196,0.3) 0%, transparent 60%),
+                  radial-gradient(ellipse at 80% 20%, rgba(255,255,255,0.07) 0%, transparent 50%);
+    }
+
+    .banner-dots {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-image: radial-gradient(circle, rgba(255,255,255,0.08) 1px, transparent 1px);
+      background-size: 28px 28px;
+    }
+
+    .banner-wave {
+      position: absolute;
+      bottom: -2px; left: 0; right: 0;
+      height: 60px;
+    }
+
+    .banner-wave svg { width: 100%; height: 100%; }
+
+    .banner-inner { position: relative; z-index: 1; }
+
+    .church-label {
+      font-family: 'Nunito', sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.6);
+      margin-bottom: 12px;
+    }
+
+    .banner h1 {
+      font-family: 'Lora', serif;
+      font-size: clamp(28px, 5vw, 46px);
+      font-weight: 600;
+      color: #fff;
+      line-height: 1.2;
+      margin-bottom: 10px;
+    }
+
+    .banner h1 span {
+      font-style: italic;
+      color: #90CAF9;
+    }
+
+    .banner-sub {
+      font-size: 15px;
+      color: rgba(255,255,255,0.55);
+      font-style: italic;
+    }
+
+    /* ── MAIN CONTENT ── */
+    .main {
+      max-width: 680px;
+      margin: 0 auto;
+      padding: 48px 24px 64px;
+    }
+
+    .intro {
+      font-family: 'Lora', serif;
+      font-size: 18px;
+      line-height: 1.7;
+      color: var(--navy);
+      text-align: center;
+      margin-bottom: 44px;
+      font-style: italic;
+    }
+
+    /* ── CARDS ── */
+    .cards { display: flex; flex-direction: column; gap: 16px; }
+
+    .card {
+      display: flex;
+      align-items: flex-start;
+      gap: 20px;
+      border-radius: var(--radius);
+      padding: 22px 24px;
+      border: 2px solid transparent;
+      opacity: 0;
+      transform: translateY(24px);
+      animation: fadeUp 0.5s ease forwards;
+    }
+
+    .card:nth-child(1) { background: var(--blue);   border-color: #BBDEFB; animation-delay: 0.1s; }
+    .card:nth-child(2) { background: var(--green);  border-color: #C8E6C9; animation-delay: 0.2s; }
+    .card:nth-child(3) { background: var(--yellow);  border-color: #FFF9C4; animation-delay: 0.3s; }
+    .card:nth-child(4) { background: var(--blue);   border-color: #BBDEFB; animation-delay: 0.4s; }
+    .card:nth-child(5) { background: var(--green);  border-color: #C8E6C9; animation-delay: 0.5s; }
+
+    @keyframes fadeUp {
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .card-emoji {
+      font-size: 34px;
+      line-height: 1;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .card-body {}
+
+    .card-title {
+      font-size: 17px;
+      font-weight: 800;
+      color: var(--navy);
+      margin-bottom: 5px;
+      line-height: 1.3;
+    }
+
+    .card-text {
+      font-size: 15px;
+      line-height: 1.65;
+      color: #3D5166;
+    }
+
+    /* ── FOOTER ── */
+    .footer-block {
+      margin-top: 48px;
+      background: var(--navy);
+      border-radius: var(--radius);
+      padding: 32px 28px;
+      text-align: center;
+      opacity: 0;
+      animation: fadeUp 0.5s ease 0.7s forwards;
+    }
+
+    .footer-block p {
+      font-size: 16px;
+      line-height: 1.65;
+      color: rgba(255,255,255,0.85);
+      margin-bottom: 16px;
+    }
+
+    .footer-block .sign-off {
+      font-family: 'Lora', serif;
+      font-style: italic;
+      font-size: 18px;
+      color: #90CAF9;
+      margin-bottom: 0;
+    }
+
+    .fine-print {
+      margin-top: 28px;
+      text-align: center;
+      font-size: 12px;
+      color: var(--muted);
+      font-style: italic;
+    }
+
+    /* Full Privacy Notice (from VBS_Privacy_Notice) */
+    .full-notice {
+      margin-top: 56px;
+      padding-top: 40px;
+      border-top: 2px solid #BBDEFB;
+    }
+    .full-notice .notice-head {
+      font-family: 'Lora', serif;
+      font-size: 24px;
+      font-weight: 600;
+      color: var(--navy);
+      margin-bottom: 6px;
+    }
+    .full-notice .effective {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 24px;
+    }
+    .full-notice h3 {
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--navy);
+      margin: 24px 0 10px;
+      line-height: 1.3;
+    }
+    .full-notice h3:first-of-type { margin-top: 0; }
+    .full-notice p, .full-notice li {
+      font-size: 15px;
+      line-height: 1.65;
+      color: #3D5166;
+      margin-bottom: 12px;
+    }
+    .full-notice ul {
+      list-style: none;
+      padding-left: 0;
+      margin: 8px 0 16px;
+    }
+    .full-notice ul li {
+      padding-left: 1.4em;
+      position: relative;
+      margin-bottom: 6px;
+    }
+    .full-notice ul li::before {
+      content: '•';
+      position: absolute;
+      left: 0;
+      color: var(--sky);
+      font-weight: 700;
+    }
+    .full-notice .contact-block {
+      background: var(--blue);
+      border: 2px solid #BBDEFB;
+      border-radius: var(--radius);
+      padding: 20px 24px;
+      margin: 20px 0;
+      font-size: 15px;
+      line-height: 1.6;
+      color: #3D5166;
+    }
+    .full-notice .contact-block strong { color: var(--navy); }
+    .full-notice .contact-block a { color: var(--navy); font-weight: 600; }
+  </style>
+</head>
+<body>
+
+  <!-- BANNER -->
+  <div class="banner">
+    <div class="banner-dots"></div>
+    <div class="banner-inner">
+      
+  <div class="mt-10 flex justify-center">
+    <img src="https://crosspointchurchsv.org/branding/logos/XptID15-1C_white.png" alt="Crosspoint Church" class="max-w-xs sm:max-w-md h-auto" width="250">
+  </div>
+      <h1>Our Privacy Promise to You</h1>
+    </div>
+
+  </div>
+
+  <!-- MAIN -->
+  <main class="main">
+
+
+    <div class="cards">
+      <h2 class="notice-head">Privacy Summary</h2>
+      <div class="card">
+        <div class="card-emoji">📋</div>
+        <div class="card-body">
+          <div class="card-title">We collect basic registration info.</div>
+          <div class="card-text">Name, contact details, emergency contacts, and any medical needs. That's it.</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-emoji">📣</div>
+        <div class="card-body">
+          <div class="card-title">We use it to run VBS and communicate with you.</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-emoji">🔒</div>
+        <div class="card-body">
+          <div class="card-title">We never sell or share your information.</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-emoji">📸</div>
+        <div class="card-body">
+          <div class="card-title">Photos/Videos only if you said YES.</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-emoji">🗑️</div>
+        <div class="card-body">
+          <div class="card-title">When VBS ends, we securely disposed your data.</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- FOOTER BLOCK -->
+
+
+
+    <!-- Full Privacy Notice (from VBS_Privacy_Notice.docx.pdf) -->
+    <section class="full-notice" id="full-notice">
+      <h2 class="notice-head">Full Privacy Notice</h2>
+      <p class="effective">Effective Date: February 17, 2026</p>
+      <p>At Crosspoint Church, the privacy and safety of every child in our care is of the utmost importance to us. This Privacy Notice explains what personal information we collect, why we collect it, how it is used, and how we protect it. By enrolling your child(ren) in Vacation Bible School (VBS), you acknowledge and agree to the practices described in this notice.</p>
+
+      <h3>1. Information We Collect</h3>
+      <p>In order to provide a safe and well-organized program, we may collect the following information about your child(ren) and your family:</p>
+      <ul>
+        <li>Child(ren)'s full name(s) and date(s) of birth</li>
+        <li>Parent or guardian name(s) and contact information</li>
+        <li>Emergency contact information</li>
+        <li>Relevant medical information or allergies as disclosed by the parent or guardian</li>
+        <li>Photo and/or video, only if permission has been granted on the accompanying consent form</li>
+      </ul>
+
+      <h3>2. How We Use Your Information</h3>
+      <p>We collect personal information solely for the purpose of communicating with families and administering the VBS program. Specifically, your information is used to:</p>
+      <ul>
+        <li>Register and identify your child(ren) during the program</li>
+        <li>Communicate important program information, schedules, and updates to parents and guardians</li>
+        <li>Respond to emergencies and ensure the safety and well-being of your child(ren)</li>
+        <li>Accommodate any medical needs or restrictions as disclosed</li>
+      </ul>
+
+      <h3>3. We Do Not Share or Sell Your Information</h3>
+      <p>Crosspoint Church does not sell, rent, trade, or otherwise share your personal information or your child(ren)'s personal information with any third party for commercial or marketing purposes. Your information is used exclusively for the administration of the VBS program and related church communications. We will never use your personal data for any purpose beyond what is described in this notice without first obtaining your explicit consent.</p>
+
+      <h3>4. Our Commitment to Children's Privacy</h3>
+      <p>Crosspoint Church is deeply committed to protecting the privacy of children in our programs. We take the following steps to safeguard your child(ren)'s personal information:</p>
+      <ul>
+        <li>Access to personal information is strictly limited to authorized staff and volunteers who require it to perform their responsibilities</li>
+        <li>Physical records are stored securely and are not left unattended or accessible to unauthorized individuals</li>
+        <li>Digital records, where applicable, are protected and access-controlled</li>
+        <li>Photo and video of children are only used when explicit permission has been granted by a parent or guardian</li>
+      </ul>
+
+      <h3>5. Data Retention</h3>
+      <p>Personal information collected for the VBS program is retained only for as long as necessary to fulfill the purposes described in this notice. Registration and medical information is securely disposed of following the conclusion of the program, unless otherwise required to be retained for safety or legal purposes.</p>
+
+      <h3>6. Your Rights</h3>
+      <p>As a parent or guardian, you have the right to request access to the personal information we hold about your child(ren), to request corrections to any inaccurate information, or to request that your information be removed from our records following the conclusion of the program. To make such a request, please contact us using the information provided below.</p>
+
+      <h3>7. Contact Us</h3>
+      <p>If you have any questions, concerns, or requests regarding this Privacy Notice or the handling of your personal information, please contact us:</p>
+      <div class="contact-block">
+        <strong>Crosspoint Church</strong><br>
+        658 Gibraltar Ct., Milpitas, CA 95035<br>
+        (408) 586-8688<br>
+        <a href="mailto:com@crosspointchurchsv.org">com@crosspointchurchsv.org</a>
+      </div>
+      <p>This Privacy Notice applies to the Crosspoint Church VBS program. It does not govern other church programs or services.</p>
+      
+    </section>
+
+  </main>
+
+</body>
+</html>

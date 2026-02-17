@@ -1,4 +1,5 @@
 <?php
+session_start();
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/price.php';
@@ -20,9 +21,10 @@ try {
 $registration = null;
 if ($session && $session->payment_status === 'paid' && !empty($session->metadata->registration_id)) {
     $reg_id = (int) $session->metadata->registration_id;
-    $stmt = $pdo->prepare("UPDATE registrations SET status = 'paid', stripe_session_id = ? WHERE id = ? AND status = 'draft'");
-    $stmt->execute([$session_id, $reg_id]);
+    $stmt = $pdo->prepare("UPDATE registrations SET status = 'paid', stripe_session_id = ?, updated_at = ? WHERE id = ? AND status = 'draft'");
+    $stmt->execute([$session_id, date('Y-m-d H:i:s'), $reg_id]);
     if ($stmt->rowCount() > 0) {
+        unset($_SESSION['vbs_registration_data']);
         $stmt = $pdo->prepare("SELECT * FROM registrations WHERE id = ?");
         $stmt->execute([$reg_id]);
         $registration = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -108,9 +110,7 @@ layout_head('Thank you');
   <?php endif; ?>
   <p class="text-center text-gray-500 text-sm mt-8"><a href="<?= APP_URL ?>/register" class="text-indigo-600 hover:underline">Register another</a></p>
 
-  <div class="mt-10 flex justify-center">
-    <img src="https://crosspointchurchsv.org/branding/logos/Xpt-ID2015-1_1400x346.png" alt="Crosspoint Church" class="max-w-xs sm:max-w-md h-auto" width="350" height="86">
-  </div>
 </div>
+<?php layout_footer(); ?>
 </body>
 </html>
