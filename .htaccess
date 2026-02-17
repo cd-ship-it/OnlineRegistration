@@ -1,0 +1,24 @@
+RewriteEngine On
+# If running in a subdirectory (e.g. /OnlineRegistration), set RewriteBase accordingly
+RewriteBase /OnlineRegistration
+
+# Skip if request is for an existing file or directory
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+
+# Public clean URLs
+RewriteRule ^register$ register.php [L]
+RewriteRule ^consent$ consent.php [L]
+RewriteRule ^success$ success.php [L]
+RewriteRule ^cancel$ cancel.php [L]
+RewriteRule ^stripe-webhook$ stripe-webhook.php [L]
+
+# Admin clean URLs
+RewriteRule ^admin$ admin/index.php [L]
+RewriteRule ^admin/settings$ admin/settings.php [L]
+RewriteRule ^admin/registrations$ admin/registrations.php [L]
+RewriteRule ^admin/logout$ admin/logout.php [L]
+
+# Optional: uncomment to redirect *.php URLs to clean URLs
+# RewriteCond %{THE_REQUEST} \s/+(.+?)\.php[\s?] [NC]
+# RewriteRule ^ %1 [R=301,L,NE]

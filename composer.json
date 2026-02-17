@@ -1,0 +1,10 @@
+{
+  "name": "vbs/registration",
+  "require": {
+    "php": ">=7.4",
+    "stripe/stripe-php": "^10.0"
+  },
+  "autoload": {
+    "classmap": []
+  }
+}
