@@ -45,8 +45,10 @@ $digital_signature_value = '';
 $photo_consent_value = '';
 
 // Restore form from session when user returns after cancelling payment
+$existing_draft_id = null;
 if ($_SERVER['REQUEST_METHOD'] !== 'POST' && !empty($_GET['cancelled']) && !empty($_SESSION['vbs_registration_data'])) {
     $saved = $_SESSION['vbs_registration_data'];
+    $existing_draft_id = isset($saved['registration_id']) ? (int) $saved['registration_id'] : null;
     $form = [
         'parent_first_name' => $saved['parent_first_name'] ?? '',
         'parent_last_name' => $saved['parent_last_name'] ?? '',
@@ -189,9 +191,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             foreach ($wanted as $col => $val) {
                 if (in_array($col, $reg_columns, true)) { $cols[] = '`' . $col . '`'; $vals[] = $val; }
             }
-            $stmt = $pdo->prepare('INSERT INTO registrations (' . implode(',', $cols) . ') VALUES (' . implode(',', array_fill(0, count($vals), '?')) . ')');
-            $stmt->execute($vals);
-            $registration_id = (int) $pdo->lastInsertId();
+            
+            // Check if we have an existing draft registration to update (from cancelled payment)
+            $registration_id = null;
+            if ($existing_draft_id && $existing_draft_id > 0) {
+                // Verify the draft still exists and is still in draft status
+                $check_stmt = $pdo->prepare("SELECT id FROM registrations WHERE id = ? AND status = 'draft'");
+                $check_stmt->execute([$existing_draft_id]);
+                if ($check_stmt->fetch()) {
+                    $registration_id = $existing_draft_id;
+                    // Update existing draft registration
+                    $update_cols = [];
+                    $update_vals = [];
+                    foreach ($wanted as $col => $val) {
+                        if (in_array($col, $reg_columns, true) && $col !== 'created_at') {
+                            $update_cols[] = '`' . $col . '` = ?';
+                            $update_vals[] = $val;
+                        }
+                    }
+                    $update_vals[] = $registration_id;
+                    $update_stmt = $pdo->prepare('UPDATE registrations SET ' . implode(', ', $update_cols) . ' WHERE id = ?');
+                    $update_stmt->execute($update_vals);
+                    // Delete old kids - we'll insert new ones below
+                    $pdo->prepare("DELETE FROM registration_kids WHERE registration_id = ?")->execute([$registration_id]);
+                }
+            }
+            
+            // If no existing draft, create new one
+            if (!$registration_id) {
+                $stmt = $pdo->prepare('INSERT INTO registrations (' . implode(',', $cols) . ') VALUES (' . implode(',', array_fill(0, count($vals), '?')) . ')');
+                $stmt->execute($vals);
+                $registration_id = (int) $pdo->lastInsertId();
+            }
             $kid_columns = $pdo->query("SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'registration_kids'")->fetchAll(PDO::FETCH_COLUMN);
             $kid_cols_wanted = ['registration_id', 'first_name', 'last_name', 'age', 'gender', 'date_of_birth', 'last_grade_completed', 't_shirt_size', 'medical_allergy_info', 'sort_order'];
             $kid_cols = array_filter($kid_cols_wanted, function ($c) use ($kid_columns) { return in_array($c, $kid_columns, true); });
@@ -233,7 +264,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             ]);
             if (empty($session->url)) throw new Exception('Stripe did not return a checkout URL.');
             // Save form data to session so if user cancels payment they get it back
+            // Also save registration_id so we can update the draft instead of creating duplicates
             $_SESSION['vbs_registration_data'] = [
+                'registration_id' => $registration_id,
                 'parent_first_name' => $parent_first,
                 'parent_last_name' => $parent_last,
                 'email' => $email,
