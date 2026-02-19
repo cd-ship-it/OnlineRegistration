@@ -4,6 +4,7 @@ require_once dirname(__DIR__) . '/includes/db.php';
 require_once dirname(__DIR__) . '/includes/auth.php';
 require_once dirname(__DIR__) . '/includes/price.php';
 require_once dirname(__DIR__) . '/includes/layout.php';
+require_once dirname(__DIR__) . '/includes/db_helper.php';
 
 require_admin();
 
@@ -36,25 +37,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($groups_count < 1) $errors[] = 'Number of groups must be at least 1.';
 
     if (empty($errors)) {
-        $stmt = $pdo->prepare("INSERT INTO settings (`key`, `value`) VALUES (?, ?) ON DUPLICATE KEY UPDATE `value` = VALUES(`value`)");
-        $stmt->execute(['price_per_kid_cents', (string) (int) round($price_per_kid_dollars * 100)]);
-        $stmt->execute(['currency', $currency]);
-        $stmt->execute(['early_bird_start_date', $early_bird_start]);
-        $stmt->execute(['early_bird_end_date', $early_bird_end]);
-        $stmt->execute(['early_bird_price_per_kid_cents', (string) (int) round($early_bird_price_per_kid_dollars * 100)]);
-        $stmt->execute(['multi_kid_price_per_kid_cents', (string) (int) round($multi_kid_price_per_kid_dollars * 100)]);
-        $stmt->execute(['multi_kid_min_count', (string) $multi_kid_min_count]);
-        $stmt->execute(['max_kids_per_registration', (string) $max_kids_per_registration]);
-        $stmt->execute(['registration_open', $registration_open]);
-        $stmt->execute(['consent_content', $consent_content]);
-        $stmt->execute(['event_description', $event_description]);
-        $stmt->execute(['groups_max_children', (string) $groups_max_children]);
-        $stmt->execute(['groups_count', (string) $groups_count]);
-        $stmt->execute(['event_title', $event_title]);
-        $stmt->execute(['event_start_date', $event_start_date]);
-        $stmt->execute(['event_end_date', $event_end_date]);
-        $stmt->execute(['event_start_time', $event_start_time]);
-        $stmt->execute(['event_end_time', $event_end_time]);
+        admin_save_settings($pdo, [
+            'price_per_kid_cents'            => (string) (int) round($price_per_kid_dollars * 100),
+            'currency'                        => $currency,
+            'early_bird_start_date'           => $early_bird_start,
+            'early_bird_end_date'             => $early_bird_end,
+            'early_bird_price_per_kid_cents'  => (string) (int) round($early_bird_price_per_kid_dollars * 100),
+            'multi_kid_price_per_kid_cents'   => (string) (int) round($multi_kid_price_per_kid_dollars * 100),
+            'multi_kid_min_count'             => (string) $multi_kid_min_count,
+            'max_kids_per_registration'       => (string) $max_kids_per_registration,
+            'registration_open'               => $registration_open,
+            'consent_content'                 => $consent_content,
+            'event_description'               => $event_description,
+            'groups_max_children'             => (string) $groups_max_children,
+            'groups_count'                    => (string) $groups_count,
+            'event_title'                     => $event_title,
+            'event_start_date'                => $event_start_date,
+            'event_end_date'                  => $event_end_date,
+            'event_start_time'                => $event_start_time,
+            'event_end_time'                  => $event_end_time,
+        ]);
         $message = 'Settings saved.';
     }
 }
@@ -187,20 +189,7 @@ admin_nav('settings');
       <p class="text-sm text-gray-500 mt-2">The Photo &amp; Video Release (Section 5) is always shown at the end of the consent form and cannot be edited here.</p>
     </div>
 
-    <div class="card">
-      <h2 class="text-lg font-semibold mb-4">Assign Groups</h2>
-      <p class="text-sm text-gray-600 mb-3">Used on the <a href="<?= APP_URL ?>/admin/assigngroups" class="text-indigo-600 hover:underline">Assign Groups</a> page.</p>
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <label for="groups_max_children" class="block text-sm font-medium text-gray-700 mb-1">Max children per group</label>
-          <input type="number" id="groups_max_children" name="groups_max_children" min="1" value="<?= htmlspecialchars($groups_max_children) ?>" class="input-field w-32">
-        </div>
-        <div>
-          <label for="groups_count" class="block text-sm font-medium text-gray-700 mb-1">Number of groups</label>
-          <input type="number" id="groups_count" name="groups_count" min="1" value="<?= htmlspecialchars($groups_count) ?>" class="input-field w-32">
-        </div>
-      </div>
-    </div>
+
 
     <div class="card">
       <h2 class="text-lg font-semibold mb-4">Other</h2>

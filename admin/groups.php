@@ -3,14 +3,13 @@ require_once dirname(__DIR__) . '/config.php';
 require_once dirname(__DIR__) . '/includes/db.php';
 require_once dirname(__DIR__) . '/includes/auth.php';
 require_once dirname(__DIR__) . '/includes/layout.php';
+require_once dirname(__DIR__) . '/includes/db_helper.php';
 
 require_admin();
 
-$db = (defined('DB_NAME') && DB_NAME !== '') ? '`' . str_replace('`', '``', DB_NAME) . '`.' : '';
-
 $message = '';
-$errors = [];
-$roles = ['Crew Leader', 'Assistant', 'Crew Member'];
+$errors  = [];
+$roles   = ['Crew Leader', 'Assistant', 'Crew Member'];
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -31,24 +30,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($name === '')
       $errors[] = 'Group name is required.';
     if (empty($errors)) {
-      global $pdo, $db;
-      $stmt = $pdo->query("SELECT COALESCE(MAX(sort_order), -1) + 1 AS next FROM {$db}groups");
-      $next = (int) $stmt->fetch(PDO::FETCH_ASSOC)['next'];
-      $pdo->prepare("INSERT INTO {$db}groups (name, sort_order) VALUES (?, ?)")->execute([$name, $next]);
+      groups_create($pdo, $name);
       $message = 'Group created.';
     }
   }
 
   // RENAME GROUP
   if ($action === 'rename_group') {
-    $gid = (int) ($_POST['group_id'] ?? 0);
+    $gid  = (int) ($_POST['group_id'] ?? 0);
     $name = trim($_POST['group_name'] ?? '');
     if ($gid < 1)
       $errors[] = 'Invalid group.';
     if ($name === '')
       $errors[] = 'Group name is required.';
     if (empty($errors)) {
-      $pdo->prepare("UPDATE {$db}groups SET name = ? WHERE id = ?")->execute([$name, $gid]);
+      groups_rename($pdo, $gid, $name);
       $message = 'Group renamed.';
     }
   }
@@ -57,19 +53,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   if ($action === 'delete_group') {
     $gid = (int) ($_POST['group_id'] ?? 0);
     if ($gid > 0) {
-      $pdo->prepare("UPDATE {$db}registration_kids SET group_id = NULL WHERE group_id = ?")->execute([$gid]);
-      $pdo->prepare("DELETE FROM {$db}groups WHERE id = ?")->execute([$gid]);
+      groups_delete($pdo, $gid);
     }
     redirect_groups();
   }
 
   // ADD VOLUNTEER
   if ($action === 'add_volunteer') {
-    global $roles;
-    $gid = (int) ($_POST['group_id'] ?? 0);
-    $name = trim($_POST['vol_name'] ?? '');
+    $gid   = (int) ($_POST['group_id'] ?? 0);
+    $name  = trim($_POST['vol_name'] ?? '');
     $email = trim($_POST['vol_email'] ?? '');
-    $role = trim($_POST['vol_role'] ?? '');
+    $role  = trim($_POST['vol_role'] ?? '');
     if ($gid < 1)
       $errors[] = 'Invalid group.';
     if ($name === '')
@@ -81,19 +75,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!in_array($role, $roles, true))
       $errors[] = 'Role is required.';
     if (empty($errors)) {
-      $pdo->prepare("INSERT INTO {$db}group_volunteers (group_id, name, email, role) VALUES (?, ?, ?, ?)")
-        ->execute([$gid, $name, $email, $role]);
+      groups_add_volunteer($pdo, $gid, $name, $email, $role);
       $message = 'Volunteer added.';
     }
   }
 
   // EDIT VOLUNTEER
   if ($action === 'edit_volunteer') {
-    global $roles;
-    $vid = (int) ($_POST['vol_id'] ?? 0);
-    $name = trim($_POST['vol_name'] ?? '');
+    $vid   = (int) ($_POST['vol_id'] ?? 0);
+    $name  = trim($_POST['vol_name'] ?? '');
     $email = trim($_POST['vol_email'] ?? '');
-    $role = trim($_POST['vol_role'] ?? '');
+    $role  = trim($_POST['vol_role'] ?? '');
     if ($vid < 1)
       $errors[] = 'Invalid volunteer.';
     if ($name === '')
@@ -105,8 +97,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!in_array($role, $roles, true))
       $errors[] = 'Role is required.';
     if (empty($errors)) {
-      $pdo->prepare("UPDATE {$db}group_volunteers SET name=?, email=?, role=? WHERE id=?")
-        ->execute([$name, $email, $role, $vid]);
+      groups_edit_volunteer($pdo, $vid, $name, $email, $role);
       $message = 'Volunteer updated.';
     }
   }
@@ -115,7 +106,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   if ($action === 'delete_volunteer') {
     $vid = (int) ($_POST['vol_id'] ?? 0);
     if ($vid > 0) {
-      $pdo->prepare("DELETE FROM {$db}group_volunteers WHERE id = ?")->execute([$vid]);
+      groups_delete_volunteer($pdo, $vid);
     }
     redirect_groups();
   }
@@ -123,32 +114,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 // ─── Load data ────────────────────────────────────────────────────────────────
 
-$groups = $pdo->query("SELECT * FROM {$db}groups ORDER BY sort_order, id")->fetchAll(PDO::FETCH_ASSOC);
+$groups     = groups_get_all($pdo);
+$group_ids  = array_map(fn($g) => (int) $g['id'], $groups);
 
-$volunteers_by_group = [];
-if (!empty($groups)) {
-  $gids = implode(',', array_map(fn($g) => (int) $g['id'], $groups));
-  $vols = $pdo->query("SELECT * FROM {$db}group_volunteers WHERE group_id IN ($gids) ORDER BY role, name")->fetchAll(PDO::FETCH_ASSOC);
-  foreach ($vols as $v)
-    $volunteers_by_group[(int) $v['group_id']][] = $v;
-}
-
-$kid_counts = [];
-if (!empty($groups)) {
-  $gids = implode(',', array_map(fn($g) => (int) $g['id'], $groups));
-  $rows = $pdo->query("SELECT group_id, COUNT(*) AS cnt FROM {$db}registration_kids WHERE group_id IN ($gids) GROUP BY group_id")->fetchAll(PDO::FETCH_ASSOC);
-  foreach ($rows as $r)
-    $kid_counts[(int) $r['group_id']] = (int) $r['cnt'];
-}
+$volunteers_by_group = groups_get_volunteers_by_group($pdo, $group_ids);
+$kid_counts          = groups_get_kid_counts($pdo, $group_ids);
 
 // editing volunteer?
 $edit_vol = null;
 $edit_gid = 0;
 if (isset($_GET['edit_vol'])) {
-  $vid = (int) $_GET['edit_vol'];
-  $row = $pdo->prepare("SELECT * FROM {$db}group_volunteers WHERE id = ?");
-  $row->execute([$vid]);
-  $edit_vol = $row->fetch(PDO::FETCH_ASSOC);
+  $edit_vol = groups_get_volunteer($pdo, (int) $_GET['edit_vol']);
   if ($edit_vol)
     $edit_gid = (int) $edit_vol['group_id'];
 }

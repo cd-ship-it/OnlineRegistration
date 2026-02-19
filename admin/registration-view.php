@@ -4,6 +4,7 @@ require_once dirname(__DIR__) . '/includes/db.php';
 require_once dirname(__DIR__) . '/includes/auth.php';
 require_once dirname(__DIR__) . '/includes/price.php';
 require_once dirname(__DIR__) . '/includes/layout.php';
+require_once dirname(__DIR__) . '/includes/db_helper.php';
 
 require_admin();
 
@@ -13,17 +14,13 @@ if ($id < 1) {
   exit;
 }
 
-$stmt = $pdo->prepare("SELECT * FROM registrations WHERE id = ?");
-$stmt->execute([$id]);
-$reg = $stmt->fetch(PDO::FETCH_ASSOC);
+$reg = admin_get_registration($pdo, $id);
 if (!$reg) {
   header('Location: ' . APP_URL . '/admin/registrations', true, 302);
   exit;
 }
 
-$stmt = $pdo->prepare("SELECT * FROM registration_kids WHERE registration_id = ? ORDER BY sort_order, id");
-$stmt->execute([$id]);
-$kids = $stmt->fetchAll(PDO::FETCH_ASSOC);
+$kids = admin_get_registration_kids($pdo, $id);
 
 function val($v)
 {

@@ -4,6 +4,7 @@ require_once dirname(__DIR__) . '/includes/db.php';
 require_once dirname(__DIR__) . '/includes/auth.php';
 require_once dirname(__DIR__) . '/includes/price.php';
 require_once dirname(__DIR__) . '/includes/layout.php';
+require_once dirname(__DIR__) . '/includes/db_helper.php';
 
 require_admin();
 
@@ -20,35 +21,11 @@ $order_columns = [
     'status' => 'r.status ' . $dir,
     'date'   => 'r.created_at ' . $dir,
 ];
-$sort_key = isset($order_columns[$sort]) ? $sort : 'date';
+$sort_key  = isset($order_columns[$sort]) ? $sort : 'date';
 $order_sql = $order_columns[$sort_key];
 
-$q = "SELECT r.*, (SELECT COUNT(*) FROM registration_kids k WHERE k.registration_id = r.id) AS kid_count FROM registrations r WHERE 1=1";
-$params = [];
-if ($status_filter !== '') {
-    $q .= " AND r.status = ?";
-    $params[] = $status_filter;
-}
-$q .= " ORDER BY " . $order_sql;
-$stmt = $pdo->prepare($q);
-$stmt->execute($params);
-$registrations = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-// Fetch all kids for the registrations in the current filter
-$kids_q = "SELECT k.*, r.parent_first_name, r.parent_last_name, r.status AS reg_status, g.name AS group_name
-           FROM registration_kids k
-           JOIN registrations r ON r.id = k.registration_id
-           LEFT JOIN groups g ON g.id = k.group_id
-           WHERE 1=1";
-$kids_params = [];
-if ($status_filter !== '') {
-    $kids_q .= " AND r.status = ?";
-    $kids_params[] = $status_filter;
-}
-$kids_q .= " ORDER BY k.last_name, k.first_name";
-$kids_stmt = $pdo->prepare($kids_q);
-$kids_stmt->execute($kids_params);
-$all_kids = $kids_stmt->fetchAll(PDO::FETCH_ASSOC);
+$registrations = admin_get_registrations($pdo, $status_filter, $order_sql);
+$all_kids      = admin_get_kids_list($pdo, $status_filter);
 
 function sort_url($list_url, $status_filter, $sort, $dir, $column) {
     $params = [];

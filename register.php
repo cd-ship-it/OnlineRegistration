@@ -174,6 +174,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $errors[] = 'Email is required.';
   elseif (!filter_var($email, FILTER_VALIDATE_EMAIL))
     $errors[] = 'Please enter a valid email.';
+  if ($phone === '')
+    $errors[] = 'Phone number is required.';
+  if ($address === '')
+    $errors[] = 'Address is required.';
+  if (trim($_POST['emergency_contact_name'] ?? '') === '')
+    $errors[] = 'Emergency contact name is required.';
+  if (trim($_POST['emergency_contact_phone'] ?? '') === '')
+    $errors[] = 'Emergency contact phone is required.';
+  if (trim($_POST['emergency_contact_relationship'] ?? '') === '')
+    $errors[] = 'Emergency contact relationship is required.';
 
   // Build kid_rows and validate kids
   $kid_rows = [];
@@ -205,10 +215,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
   if (count($kid_rows) === 0)
     $errors[] = 'Please add at least one child.';
   foreach ($kid_rows as $i => $k) {
+    $n = $i + 1;
     if ($k['first_name'] === '')
-      $errors[] = 'Kid ' . ($i + 1) . ': first name is required.';
+      $errors[] = "Kid $n: first name is required.";
     if ($k['last_name'] === '')
-      $errors[] = 'Kid ' . ($i + 1) . ': last name is required.';
+      $errors[] = "Kid $n: last name is required.";
+    if (empty($k['date_of_birth']))
+      $errors[] = "Kid $n: date of birth is required.";
+    if (empty($k['last_grade_completed']))
+      $errors[] = "Kid $n: grade entering in Fall 2026 is required.";
+    if (empty($k['t_shirt_size']))
+      $errors[] = "Kid $n: T-shirt size is required.";
   }
   if (count($kid_rows) > $max_kids)
     $errors[] = "Maximum $max_kids children per registration.";
@@ -234,6 +251,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
   $hear_from_us_db = ($hear_from_us_select === 'Other' && $hear_from_us_other_txt !== '')
     ? 'Other: ' . $hear_from_us_other_txt
     : $hear_from_us_select;
+  if ($hear_from_us_select === '')
+    $errors[] = 'Please tell us how you heard about us.';
+  elseif ($hear_from_us_select === 'Other' && $hear_from_us_other_txt === '')
+    $errors[] = 'Please specify how you heard about us.';
 
   if (empty($errors)) {
     $total_dollars = compute_total_dollars($pdo, count($kid_rows));
@@ -552,12 +573,12 @@ $hero_img = rtrim(parse_url(APP_URL, PHP_URL_PATH) ?: '', '/') . '/img/image.web
               class="input-field">
           </div>
           <div class="mt-4">
-            <label for="phone" class="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-            <input type="tel" id="phone" name="phone" value="<?= htmlspecialchars($form['phone']) ?>" class="input-field">
+            <label for="phone" class="block text-sm font-medium text-gray-700 mb-1">Phone *</label>
+            <input type="tel" id="phone" name="phone" required value="<?= htmlspecialchars($form['phone']) ?>" class="input-field">
           </div>
           <div class="mt-4">
-            <label for="address" class="block text-sm font-medium text-gray-700 mb-1">Address</label>
-            <input type="text" id="address" name="address" value="<?= htmlspecialchars($form['address']) ?>"
+            <label for="address" class="block text-sm font-medium text-gray-700 mb-1">Address *</label>
+            <input type="text" id="address" name="address" required value="<?= htmlspecialchars($form['address']) ?>"
               class="input-field">
           </div>
           <div class="mt-4">
@@ -582,8 +603,8 @@ $hero_img = rtrim(parse_url(APP_URL, PHP_URL_PATH) ?: '', '/') . '/img/image.web
           </div>
           <div class="mt-4 pt-4 border-t border-gray-100">
             <label for="hear_from_us_select" class="block text-sm font-medium text-gray-700 mb-1">How did you hear about
-              us?</label>
-            <select name="hear_from_us" id="hear_from_us_select" class="input-field max-w-sm text-sm"
+              us? *</label>
+            <select name="hear_from_us" id="hear_from_us_select" class="input-field max-w-sm text-sm" required
               onchange="document.getElementById('hear_from_us_other_wrap').classList.toggle('hidden', this.value !== 'Other')">
               <option value="">— Select an option —</option>
               <?php foreach (['Previous VBS', 'Google search', 'Facebook/Instagram/Social Media', 'Friend or family referral','Flyers', 'Other'] as $opt): ?>
@@ -603,19 +624,19 @@ $hero_img = rtrim(parse_url(APP_URL, PHP_URL_PATH) ?: '', '/') . '/img/image.web
           <h3 class="text-lg font-semibold text-gray-900 mb-4">Emergency contact</h3>
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
-              <label for="emergency_contact_name" class="block text-sm font-medium text-gray-700 mb-1">Name</label>
-              <input type="text" id="emergency_contact_name" name="emergency_contact_name" maxlength="100"
+              <label for="emergency_contact_name" class="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+              <input type="text" id="emergency_contact_name" name="emergency_contact_name" maxlength="100" required
                 value="<?= htmlspecialchars($form['emergency_contact_name']) ?>" class="input-field">
             </div>
             <div>
-              <label for="emergency_contact_phone" class="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-              <input type="tel" id="emergency_contact_phone" name="emergency_contact_phone" maxlength="50"
+              <label for="emergency_contact_phone" class="block text-sm font-medium text-gray-700 mb-1">Phone *</label>
+              <input type="tel" id="emergency_contact_phone" name="emergency_contact_phone" maxlength="50" required
                 value="<?= htmlspecialchars($form['emergency_contact_phone']) ?>" class="input-field">
             </div>
             <div>
               <label for="emergency_contact_relationship"
-                class="block text-sm font-medium text-gray-700 mb-1">Relationship</label>
-              <input type="text" id="emergency_contact_relationship" name="emergency_contact_relationship" maxlength="50"
+                class="block text-sm font-medium text-gray-700 mb-1">Relationship *</label>
+              <input type="text" id="emergency_contact_relationship" name="emergency_contact_relationship" maxlength="50" required
                 value="<?= htmlspecialchars($form['emergency_contact_relationship']) ?>" class="input-field">
             </div>
           </div>
@@ -656,9 +677,14 @@ $hero_img = rtrim(parse_url(APP_URL, PHP_URL_PATH) ?: '', '/') . '/img/image.web
                 </div>
                 <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   <div>
-                    <label for="kids-<?= $idx ?>-age" class="block text-sm font-medium text-gray-700 mb-1">Age</label>
+                    <label for="kids-<?= $idx ?>-date_of_birth" class="block text-sm font-medium text-gray-700 mb-1">Date of birth *</label>
+                    <input type="date" id="kids-<?= $idx ?>-date_of_birth" name="kids[<?= $idx ?>][date_of_birth]"
+                      required value="<?= htmlspecialchars($kid['date_of_birth']) ?>" class="input-field dob-input">
+                  </div>
+                  <div>
+                    <label for="kids-<?= $idx ?>-age" class="block text-sm font-medium text-gray-700 mb-1">Age <span class="text-gray-400 font-normal text-xs">(age as of VBS first day)</span></label>
                     <input type="number" id="kids-<?= $idx ?>-age" name="kids[<?= $idx ?>][age]" min="1" max="18"
-                      value="<?= htmlspecialchars($kid['age'] !== '' ? $kid['age'] : '') ?>" class="input-field">
+                      value="<?= htmlspecialchars($kid['age'] !== '' ? $kid['age'] : '') ?>" class="input-field age-input">
                   </div>
                   <div>
                     <label for="kids-<?= $idx ?>-gender" class="block text-sm font-medium text-gray-700 mb-1">Gender</label>
@@ -668,19 +694,13 @@ $hero_img = rtrim(parse_url(APP_URL, PHP_URL_PATH) ?: '', '/') . '/img/image.web
                       <option value="Girl" <?= ($kid['gender'] ?? '') === 'Girl' ? 'selected' : '' ?>>Girl</option>
                     </select>
                   </div>
-                  <div>
-                    <label for="kids-<?= $idx ?>-date_of_birth" class="block text-sm font-medium text-gray-700 mb-1">Date of
-                      birth</label>
-                    <input type="date" id="kids-<?= $idx ?>-date_of_birth" name="kids[<?= $idx ?>][date_of_birth]"
-                      value="<?= htmlspecialchars($kid['date_of_birth']) ?>" class="input-field">
-                  </div>
                 </div>
                 <div class="mt-4">
                   <label for="kids-<?= $idx ?>-last_grade_completed"
                     class="block text-sm font-medium text-gray-700 mb-1">Child Grade Entering in Fall 2026 (Note: Not the
-                    current grade)</label>
+                    current grade) *</label>
                   <select id="kids-<?= $idx ?>-last_grade_completed" name="kids[<?= $idx ?>][last_grade_completed]"
-                    class="input-field w-full">
+                    required class="input-field w-full">
                     <option value="">Select</option>
                     <?php foreach ($grade_options as $opt): ?>
                       <option value="<?= htmlspecialchars($opt) ?>" <?= ($kid['last_grade_completed'] ?? '') === $opt ? 'selected' : '' ?>><?= htmlspecialchars($opt) ?></option>
@@ -689,9 +709,9 @@ $hero_img = rtrim(parse_url(APP_URL, PHP_URL_PATH) ?: '', '/') . '/img/image.web
                 </div>
                 <div class="mt-4">
                   <label for="kids-<?= $idx ?>-t_shirt_size" class="block text-sm font-medium text-gray-700 mb-1">T-Shirt
-                    size</label>
+                    size *</label>
                   <select id="kids-<?= $idx ?>-t_shirt_size" name="kids[<?= $idx ?>][t_shirt_size]"
-                    class="input-field w-full">
+                    required class="input-field w-full">
                     <option value="">Select</option>
                     <?php foreach ($t_shirt_size_options as $opt): ?>
                       <option value="<?= htmlspecialchars($opt) ?>" <?= ($kid['t_shirt_size'] ?? '') === $opt ? 'selected' : '' ?>><?= htmlspecialchars($opt) ?></option>
@@ -913,11 +933,12 @@ $hero_img = rtrim(parse_url(APP_URL, PHP_URL_PATH) ?: '', '/') . '/img/image.web
           '<div><label class="block text-sm font-medium text-gray-700 mb-1">First name *</label><input type="text" name="kids[' + index + '][first_name]" required maxlength="100" class="input-field"></div>' +
           '<div><label class="block text-sm font-medium text-gray-700 mb-1">Last name *</label><input type="text" name="kids[' + index + '][last_name]" required maxlength="100" class="input-field"></div></div>' +
           '<div class="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">' +
-          '<div><label class="block text-sm font-medium text-gray-700 mb-1">Age</label><input type="number" name="kids[' + index + '][age]" min="1" max="18" class="input-field"></div>' +
+          '<div><label class="block text-sm font-medium text-gray-700 mb-1">Date of birth *</label><input type="date" name="kids[' + index + '][date_of_birth]" required class="input-field dob-input"></div>' +
+          '<div><label class="block text-sm font-medium text-gray-700 mb-1">Age <span class="text-gray-400 font-normal text-xs">(age as of VBS first day)</span></label><input type="number" name="kids[' + index + '][age]" min="1" max="18" class="input-field age-input"></div>' +
           '<div><label class="block text-sm font-medium text-gray-700 mb-1">Gender</label><select name="kids[' + index + '][gender]" class="input-field"><option value="">Select</option><option value="Boy">Boy</option><option value="Girl">Girl</option></select></div>' +
-          '<div><label class="block text-sm font-medium text-gray-700 mb-1">Date of birth</label><input type="date" name="kids[' + index + '][date_of_birth]" class="input-field"></div></div>' +
-          '<div class="mt-4"><label class="block text-sm font-medium text-gray-700 mb-1">Child Grade Entering in Fall 2026 (Note: Not the current grade)</label><select name="kids[' + index + '][last_grade_completed]" class="input-field w-full"><option value="">Select</option>' + gradeOptionsHtml + '</select></div>' +
-          '<div class="mt-4"><label class="block text-sm font-medium text-gray-700 mb-1">T-Shirt size</label><select name="kids[' + index + '][t_shirt_size]" class="input-field w-full"><option value="">Select</option>' + tShirtOptionsHtml + '</select></div>' +
+          '</div>' +
+          '<div class="mt-4"><label class="block text-sm font-medium text-gray-700 mb-1">Child Grade Entering in Fall 2026 (Note: Not the current grade) *</label><select name="kids[' + index + '][last_grade_completed]" required class="input-field w-full"><option value="">Select</option>' + gradeOptionsHtml + '</select></div>' +
+          '<div class="mt-4"><label class="block text-sm font-medium text-gray-700 mb-1">T-Shirt size *</label><select name="kids[' + index + '][t_shirt_size]" required class="input-field w-full"><option value="">Select</option>' + tShirtOptionsHtml + '</select></div>' +
           '<div class="mt-4"><label class="block text-sm font-medium text-gray-700 mb-1">Allergies / medical info</label><textarea name="kids[' + index + '][medical_allergy_info]" rows="2" maxlength="500" class="input-field w-full resize-y"></textarea></div>' +
           '<button type="button" class="remove-kid mt-4 text-sm text-red-600 hover:text-red-700" aria-label="Remove kid">Remove</button>';
         container.appendChild(div);
@@ -943,6 +964,41 @@ $hero_img = rtrim(parse_url(APP_URL, PHP_URL_PATH) ?: '', '/') . '/img/image.web
           });
         }
       });
+    });
+
+    // Auto-calculate age as of event start date (falls back to today PT if not set)
+    var eventStartDate = <?= json_encode($event_start_date ?: '') ?>;
+    function calcAge(dobValue) {
+      if (!dobValue) return null;
+      var refDate;
+      if (eventStartDate) {
+        refDate = new Date(eventStartDate + 'T00:00:00');
+      } else {
+        var ptStr = new Date().toLocaleString('en-US', { timeZone: 'America/Los_Angeles' });
+        refDate = new Date(ptStr);
+      }
+      var dob = new Date(dobValue + 'T00:00:00');
+      if (isNaN(dob) || isNaN(refDate)) return null;
+      var age = refDate.getFullYear() - dob.getFullYear();
+      var m   = refDate.getMonth() - dob.getMonth();
+      if (m < 0 || (m === 0 && refDate.getDate() < dob.getDate())) age--;
+      return age >= 1 && age <= 18 ? age : null;
+    }
+    function applyDobToAge(dobInput) {
+      var block    = dobInput.closest('.kid-block');
+      if (!block) return;
+      var ageInput = block.querySelector('.age-input');
+      if (!ageInput) return;
+      var age = calcAge(dobInput.value);
+      if (age !== null) ageInput.value = age;
+    }
+    // Fire on every DOB change (existing + dynamically added via delegation)
+    form.addEventListener('change', function(e) {
+      if (e.target.classList.contains('dob-input')) applyDobToAge(e.target);
+    });
+    // Also populate age for any pre-filled DOB values on page load
+    form.querySelectorAll('.dob-input').forEach(function(el) {
+      if (el.value) applyDobToAge(el);
     });
 
     // Name field auto-capitalizer — title-cases on blur (handles dynamic kid rows via delegation)

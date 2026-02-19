@@ -6,6 +6,224 @@
 
 require_once __DIR__ . '/logger.php';
 
+// ─── Shared DB prefix ─────────────────────────────────────────────────────────
+
+/**
+ * Returns the backtick-quoted DB name prefix (e.g. "`mydb`.") or '' if not set.
+ * Use inside every query: "SELECT * FROM {db_prefix()}table"
+ */
+function db_prefix(): string
+{
+    return (defined('DB_NAME') && DB_NAME !== '')
+        ? '`' . str_replace('`', '``', DB_NAME) . '`.'
+        : '';
+}
+
+// ─── Admin: Registrations list (admin/registrations.php) ──────────────────────
+
+/**
+ * Return registrations with kid count, optionally filtered by status.
+ * $order_sql must be pre-validated by the caller from a whitelist.
+ */
+function admin_get_registrations(PDO $pdo, string $status_filter, string $order_sql): array
+{
+    $db = db_prefix();
+    $q  = "SELECT r.*, (SELECT COUNT(*) FROM {$db}registration_kids k WHERE k.registration_id = r.id) AS kid_count
+           FROM {$db}registrations r
+           WHERE 1=1";
+    $params = [];
+    if ($status_filter !== '') {
+        $q      .= ' AND r.status = ?';
+        $params[] = $status_filter;
+    }
+    $q .= ' ORDER BY ' . $order_sql;
+    $stmt = $pdo->prepare($q);
+    $stmt->execute($params);
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+/**
+ * Return all kids joined with their registration and group, optionally filtered by status.
+ */
+function admin_get_kids_list(PDO $pdo, string $status_filter): array
+{
+    $db = db_prefix();
+    $q  = "SELECT k.*, r.parent_first_name, r.parent_last_name, r.status AS reg_status, g.name AS group_name
+           FROM {$db}registration_kids k
+           JOIN {$db}registrations r ON r.id = k.registration_id
+           LEFT JOIN {$db}groups g ON g.id = k.group_id
+           WHERE 1=1";
+    $params = [];
+    if ($status_filter !== '') {
+        $q      .= ' AND r.status = ?';
+        $params[] = $status_filter;
+    }
+    $q .= ' ORDER BY k.last_name, k.first_name';
+    $stmt = $pdo->prepare($q);
+    $stmt->execute($params);
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+// ─── Admin: Registration detail (admin/registration-view.php) ─────────────────
+
+/**
+ * Return a single registration row by ID, or null if not found.
+ */
+function admin_get_registration(PDO $pdo, int $id): ?array
+{
+    $db   = db_prefix();
+    $stmt = $pdo->prepare("SELECT * FROM {$db}registrations WHERE id = ?");
+    $stmt->execute([$id]);
+    return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+}
+
+/**
+ * Return all kids for a registration, ordered by sort_order.
+ */
+function admin_get_registration_kids(PDO $pdo, int $id): array
+{
+    $db   = db_prefix();
+    $stmt = $pdo->prepare("SELECT * FROM {$db}registration_kids WHERE registration_id = ? ORDER BY sort_order, id");
+    $stmt->execute([$id]);
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+// ─── Admin: Settings (admin/settings.php) ─────────────────────────────────────
+
+/**
+ * Upsert an array of key → value pairs into the settings table.
+ */
+function admin_save_settings(PDO $pdo, array $values): void
+{
+    $db   = db_prefix();
+    $stmt = $pdo->prepare(
+        "INSERT INTO {$db}settings (`key`, `value`) VALUES (?, ?)
+         ON DUPLICATE KEY UPDATE `value` = VALUES(`value`)"
+    );
+    foreach ($values as $key => $value) {
+        $stmt->execute([$key, $value]);
+    }
+}
+
+// ─── Admin: Groups (admin/groups.php) ─────────────────────────────────────────
+
+function groups_create(PDO $pdo, string $name): void
+{
+    $db   = db_prefix();
+    $next = (int) $pdo->query("SELECT COALESCE(MAX(sort_order), -1) + 1 AS next FROM {$db}groups")
+                       ->fetch(PDO::FETCH_ASSOC)['next'];
+    $pdo->prepare("INSERT INTO {$db}groups (name, sort_order) VALUES (?, ?)")->execute([$name, $next]);
+}
+
+function groups_rename(PDO $pdo, int $gid, string $name): void
+{
+    $db = db_prefix();
+    $pdo->prepare("UPDATE {$db}groups SET name = ? WHERE id = ?")->execute([$name, $gid]);
+}
+
+function groups_delete(PDO $pdo, int $gid): void
+{
+    $db = db_prefix();
+    $pdo->prepare("UPDATE {$db}registration_kids SET group_id = NULL WHERE group_id = ?")->execute([$gid]);
+    $pdo->prepare("DELETE FROM {$db}groups WHERE id = ?")->execute([$gid]);
+}
+
+function groups_add_volunteer(PDO $pdo, int $gid, string $name, string $email, string $role): void
+{
+    $db = db_prefix();
+    $pdo->prepare("INSERT INTO {$db}group_volunteers (group_id, name, email, role) VALUES (?, ?, ?, ?)")
+        ->execute([$gid, $name, $email, $role]);
+}
+
+function groups_edit_volunteer(PDO $pdo, int $vid, string $name, string $email, string $role): void
+{
+    $db = db_prefix();
+    $pdo->prepare("UPDATE {$db}group_volunteers SET name=?, email=?, role=? WHERE id=?")
+        ->execute([$name, $email, $role, $vid]);
+}
+
+function groups_delete_volunteer(PDO $pdo, int $vid): void
+{
+    $db = db_prefix();
+    $pdo->prepare("DELETE FROM {$db}group_volunteers WHERE id = ?")->execute([$vid]);
+}
+
+function groups_get_all(PDO $pdo): array
+{
+    $db = db_prefix();
+    return $pdo->query("SELECT * FROM {$db}groups ORDER BY sort_order, id")->fetchAll(PDO::FETCH_ASSOC);
+}
+
+/** Returns volunteers keyed by group_id. */
+function groups_get_volunteers_by_group(PDO $pdo, array $group_ids): array
+{
+    if (empty($group_ids)) return [];
+    $db   = db_prefix();
+    $in   = implode(',', array_map('intval', $group_ids));
+    $vols = $pdo->query("SELECT * FROM {$db}group_volunteers WHERE group_id IN ($in) ORDER BY role, name")
+                ->fetchAll(PDO::FETCH_ASSOC);
+    $map  = [];
+    foreach ($vols as $v) {
+        $map[(int) $v['group_id']][] = $v;
+    }
+    return $map;
+}
+
+/** Returns kid count keyed by group_id. */
+function groups_get_kid_counts(PDO $pdo, array $group_ids): array
+{
+    if (empty($group_ids)) return [];
+    $db   = db_prefix();
+    $in   = implode(',', array_map('intval', $group_ids));
+    $rows = $pdo->query("SELECT group_id, COUNT(*) AS cnt FROM {$db}registration_kids WHERE group_id IN ($in) GROUP BY group_id")
+                ->fetchAll(PDO::FETCH_ASSOC);
+    $map  = [];
+    foreach ($rows as $r) {
+        $map[(int) $r['group_id']] = (int) $r['cnt'];
+    }
+    return $map;
+}
+
+function groups_get_volunteer(PDO $pdo, int $vid): ?array
+{
+    $db   = db_prefix();
+    $stmt = $pdo->prepare("SELECT * FROM {$db}group_volunteers WHERE id = ?");
+    $stmt->execute([$vid]);
+    return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+}
+
+// ─── Success page (success.php) ───────────────────────────────────────────────
+
+/**
+ * Mark a draft registration as paid. Returns true if a row was updated.
+ */
+function success_mark_paid(PDO $pdo, int $reg_id, string $session_id, string $now): bool
+{
+    $db   = db_prefix();
+    $stmt = $pdo->prepare(
+        "UPDATE {$db}registrations SET status = 'paid', stripe_session_id = ?, updated_at = ?
+         WHERE id = ? AND status = 'draft'"
+    );
+    $stmt->execute([$session_id, $now, $reg_id]);
+    return $stmt->rowCount() > 0;
+}
+
+/**
+ * Return a registration with its kids array, or null if not found.
+ */
+function success_get_registration_with_kids(PDO $pdo, int $reg_id): ?array
+{
+    $db   = db_prefix();
+    $stmt = $pdo->prepare("SELECT * FROM {$db}registrations WHERE id = ?");
+    $stmt->execute([$reg_id]);
+    $reg  = $stmt->fetch(PDO::FETCH_ASSOC);
+    if (!$reg) return null;
+    $stmt = $pdo->prepare("SELECT * FROM {$db}registration_kids WHERE registration_id = ? ORDER BY sort_order");
+    $stmt->execute([$reg_id]);
+    $reg['kids'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    return $reg;
+}
+
 // ─── Registration (register.php) ──────────────────────────────────────────────
 
 /**

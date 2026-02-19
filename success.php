@@ -3,7 +3,7 @@ session_start();
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/price.php';
-require_once __DIR__ . '/includes/logger.php';
+require_once __DIR__ . '/includes/db_helper.php';
 require_once __DIR__ . '/vendor/autoload.php';
 
 $session_id = $_GET['session_id'] ?? '';
@@ -22,18 +22,9 @@ try {
 $registration = null;
 if ($session && $session->payment_status === 'paid' && !empty($session->metadata->registration_id)) {
   $reg_id = (int) $session->metadata->registration_id;
-  $stmt = $pdo->prepare("UPDATE registrations SET status = 'paid', stripe_session_id = ?, updated_at = ? WHERE id = ? AND status = 'draft'");
-  $stmt->execute([$session_id, date('Y-m-d H:i:s'), $reg_id]);
-  if ($stmt->rowCount() > 0) {
+  if (success_mark_paid($pdo, $reg_id, $session_id, date('Y-m-d H:i:s'))) {
     unset($_SESSION['vbs_registration_data']);
-    $stmt = $pdo->prepare("SELECT * FROM registrations WHERE id = ?");
-    $stmt->execute([$reg_id]);
-    $registration = $stmt->fetch(PDO::FETCH_ASSOC);
-    if ($registration) {
-      $stmt = $pdo->prepare("SELECT * FROM registration_kids WHERE registration_id = ? ORDER BY sort_order");
-      $stmt->execute([$reg_id]);
-      $registration['kids'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
+    $registration = success_get_registration_with_kids($pdo, $reg_id);
     // Production: send confirmation email to parent (once per paid registration)
     if ($registration && APP_ENV === 'production') {
       $to = $registration['email'];
@@ -44,7 +35,7 @@ if ($session && $session->payment_status === 'paid' && !empty($session->metadata
 
       // HTML Email Template
       $settings = get_settings($pdo);
-      $template = file_get_contents(__DIR__ . '/vbs-email-v2.html');
+      $template = file_get_contents(__DIR__ . '/vbs-email-.html');
 
       $kids_list_html = [];
       foreach ($registration['kids'] as $k) {

@@ -2,137 +2,195 @@
 <html lang="en">
 
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>VBS 2026 Registration Confirmation</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link
-    href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Nunito:wght@400;600;700&display=swap"
-    rel="stylesheet" />
-  <style>
-    body {
-      font-family: 'Nunito', sans-serif;
-      background-color: #eff6ff;
-    }
-
-    h1,
-    h2,
-    .display {
-      font-family: 'Playfair Display', serif;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VBS 2026 Registration Confirmation</title>
+    <!-- Note: Most email clients ignore these font imports, but we include them for those that don't -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Nunito:wght@400;600;700&display=swap"
+        rel="stylesheet">
 </head>
 
-<body class="bg-blue-50 py-8 px-4">
+<body style="margin: 0; padding: 0; font-family: 'Nunito', Helvetica, Arial, sans-serif; background-color: #eff6ff;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"
+        style="background-color: #eff6ff; padding: 32px 16px;">
+        <tr>
+            <td align="center">
+                <!-- Main Container -->
+                <table role="presentation" width="100%"
+                    style="max-width: 544px; background-color: #ffffff; border-radius: 24px; overflow: hidden; border: 1px solid #dbeafe; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);">
 
-  <div class="max-w-xl mx-auto bg-white rounded-3xl overflow-hidden shadow-xl border border-blue-100">
+                    <!-- Hero Image -->
+                    <tr>
+                        <td style="background-color: #1e3a8a; height: 224px; overflow: hidden; vertical-align: middle;">
+                            <img src="https://www.crosspointchurchsv.org/OnlineRegistration/img/email_hero.webp"
+                                alt="VBS 2026 Registration Banner"
+                                style="width: 100%; height: auto; display: block; border: 0;">
+                        </td>
+                    </tr>
 
-    <!-- Hero Image -->
-    <div class="w-full h-56 relative overflow-hidden bg-blue-900">
-      <img src="img/email_hero.webp" alt="VBS 2026 Registration Banner" class="w-full h-full object-cover">
-    </div>
+                    <!-- Header Band -->
+                    <tr>
+                        <td style="background-color: #f97316; padding: 12px 24px; text-align: center;">
+                            <p
+                                style="margin: 0; color: #fff7ed; font-size: 12px; text-transform: uppercase; letter-spacing: 0.2em; font-weight: 700;">
+                                Crosspoint Church</p>
+                        </td>
+                    </tr>
 
-    <!-- Header Band -->
-    <div class="bg-orange-500 py-3 px-6 text-center">
-      <p class="text-orange-50 text-xs uppercase tracking-[0.2em] font-semibold">Crosspoint Church</p>
-    </div>
+                    <!-- Main Content -->
+                    <tr>
+                        <td style="padding: 32px;">
 
-    <!-- Main Content -->
-    <div class="px-8 py-8">
+                            <!-- Thank You Block -->
+                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"
+                                style="text-align: center; margin-bottom: 32px;">
+                                <tr>
+                                    <td>
+                                        <h1
+                                            style="margin: 0 0 12px 0; font-family: 'Playfair Display', Georgia, serif; font-size: 24px; font-weight: 900; color: #1e3a8a; line-height: 1.2;">
+                                            Thank You for Registering!
+                                        </h1>
+                                        <p style="margin: 0; color: #1e40af; font-size: 16px; line-height: 1.6;">
+                                            Hi {{PARENT_FIRST_NAME}}, your registration for <span
+                                                style="font-weight: 700; color: #f97316;">{{event_title}}</span> at
+                                            <span style="font-weight: 600;">Crosspoint Church</span> is complete. Your
+                                            payment has been received — we can't wait to see you there!
+                                        </p>
+                                    </td>
+                                </tr>
+                            </table>
 
-      <!-- Thank You Block -->
-      <div class="text-center mb-8">
-        <h1 class="text-2xl font-black text-blue-900 leading-tight mb-3" style="font-family:'Playfair Display',serif;">
-          Thank You for Registering!
-        </h1>
-        <p class="text-blue-800 text-base leading-relaxed">
-          Hi {{PARENT_FIRST_NAME}}, your registration for <span class="font-bold text-orange-500">{{event_title}}</span>
-          at
-          <span class="font-semibold">Crosspoint Church</span> is complete. Your payment has been received — we can't
-          wait to see you there!
-        </p>
-      </div>
+                            <!-- Registration Details Box -->
+                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"
+                                style="background-color: #eff6ff; border: 1px solid #bfdbfe; border-radius: 16px; margin-bottom: 24px;">
+                                <tr>
+                                    <td style="padding: 24px;">
+                                        <h2
+                                            style="margin: 0 0 16px 0; font-size: 14px; text-transform: uppercase; letter-spacing: 0.1em; color: #2563eb; font-weight: 700;">
+                                            Registration Summary</h2>
 
-      <!-- Registration Details Box -->
-      <div class="bg-blue-50 border border-blue-200 rounded-2xl p-6 mb-6">
-        <h2 class="text-sm uppercase tracking-widest text-blue-600 font-bold mb-4">Registration Summary</h2>
-        <div class="space-y-3">
-          <div class="flex items-start gap-3">
-            <span class="text-orange-400 mt-0.5">👤</span>
-            <div>
-              <p class="text-xs text-blue-500 uppercase tracking-wide font-semibold">Parent</p>
-              <p class="text-gray-800 font-semibold">{{PARENT_NAME}}</p>
-            </div>
-          </div>
-          <div class="border-t border-blue-100"></div>
-          <div class="flex items-start gap-3">
-            <span class="text-orange-400 mt-0.5">💳</span>
-            <div>
-              <p class="text-xs text-blue-500 uppercase tracking-wide font-semibold">Total Paid</p>
-              <p class="text-gray-800 font-semibold">{{TOTAL_PAID}}</p>
-            </div>
-          </div>
-          <div class="border-t border-blue-100"></div>
-          <div class="flex items-start gap-3">
-            <span class="text-orange-400 mt-0.5">🧒</span>
-            <div>
-              <p class="text-xs text-blue-500 uppercase tracking-wide font-semibold">Child(ren) Registered</p>
-              <p class="text-gray-800 font-semibold">{{CHILDREN_NAMES}}</p>
-            </div>
-          </div>
-        </div>
-      </div>
+                                        <table role="presentation" width="100%" cellspacing="0" cellpadding="0"
+                                            border="0">
+                                            <!-- Parent -->
+                                            <tr>
+                                                <td style="padding-bottom: 12px;">
+                                                    <div
+                                                        style="font-size: 12px; color: #2563eb; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">
+                                                        Parent</div>
+                                                    <div style="font-size: 16px; color: #1f2937; font-weight: 700;">
+                                                        {{PARENT_NAME}}</div>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td style="border-top: 1px solid #dbeafe; padding-bottom: 12px;"></td>
+                                            </tr>
+                                            <!-- Total Paid -->
+                                            <tr>
+                                                <td style="padding-bottom: 12px;">
+                                                    <div
+                                                        style="font-size: 12px; color: #2563eb; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">
+                                                        Total Paid</div>
+                                                    <div style="font-size: 16px; color: #1f2937; font-weight: 700;">
+                                                        {{TOTAL_PAID}}</div>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td style="border-top: 1px solid #dbeafe; padding-bottom: 12px;"></td>
+                                            </tr>
+                                            <!-- Children -->
+                                            <tr>
+                                                <td>
+                                                    <div
+                                                        style="font-size: 12px; color: #2563eb; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">
+                                                        Child(ren) Registered</div>
+                                                    <div style="font-size: 16px; color: #1f2937; font-weight: 700;">
+                                                        {{CHILDREN_NAMES}}</div>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
 
-      <!-- Event Details Box -->
-      <div class="bg-orange-50 border border-orange-200 rounded-2xl p-6 mb-8">
-        <h2 class="text-sm uppercase tracking-widest text-orange-600 font-bold mb-4">Event Details</h2>
-        <div class="space-y-3">
-          <div class="flex items-start gap-3">
-            <span class="text-blue-500 mt-0.5">📅</span>
-            <div>
-              <p class="text-xs text-orange-500 uppercase tracking-wide font-semibold">Date</p>
-              <p class="text-gray-800 font-semibold">{{event_start_date}} - {{event_end_date}}</p>
-            </div>
-          </div>
-          <div class="border-t border-orange-100"></div>
-          <div class="flex items-start gap-3">
-            <span class="text-blue-500 mt-0.5">⏰</span>
-            <div>
-              <p class="text-xs text-orange-500 uppercase tracking-wide font-semibold">Time</p>
-              <p class="text-gray-800 font-semibold">{{event_start_time}} - {{event_end_time}}</p>
-            </div>
-          </div>
-          <div class="border-t border-orange-100"></div>
-          <div class="flex items-start gap-3">
-            <span class="text-blue-500 mt-0.5">📍</span>
-            <div>
-              <p class="text-xs text-orange-500 uppercase tracking-wide font-semibold">Location</p>
-              <p class="text-gray-800 font-semibold">658 Gibraltar Court<br />Milpitas, CA 95035</p>
-            </div>
-          </div>
-        </div>
-      </div>
+                            <!-- Event Details Box -->
+                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"
+                                style="background-color: #fff7ed; border: 1px solid #fed7aa; border-radius: 16px; margin-bottom: 32px;">
+                                <tr>
+                                    <td style="padding: 24px;">
+                                        <h2
+                                            style="margin: 0 0 16px 0; font-size: 14px; text-transform: uppercase; letter-spacing: 0.1em; color: #ea580c; font-weight: 700;">
+                                            Event Details</h2>
 
-      <!-- Closing Message -->
-      <p class="text-gray-700 text-center text-sm leading-relaxed mb-2">
-        We look forward to seeing you!
-      </p>
-      <p class="text-gray-500 text-center text-sm leading-relaxed">
-        Questions? Reply to this email or call our office at
-        <a href="tel:4085868688" class="text-orange-500 font-semibold">(408) 586-8688</a>.
-      </p>
+                                        <table role="presentation" width="100%" cellspacing="0" cellpadding="0"
+                                            border="0">
+                                            <!-- Date -->
+                                            <tr>
+                                                <td style="padding-bottom: 12px;">
+                                                    <div
+                                                        style="font-size: 12px; color: #f97316; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">
+                                                        Date</div>
+                                                    <div style="font-size: 16px; color: #1f2937; font-weight: 700;">
+                                                        {{event_start_date}} - {{event_end_date}}</div>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td style="border-top: 1px solid #fed7aa; padding-bottom: 12px;"></td>
+                                            </tr>
+                                            <!-- Time -->
+                                            <tr>
+                                                <td style="padding-bottom: 12px;">
+                                                    <div
+                                                        style="font-size: 12px; color: #f97316; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">
+                                                        Time</div>
+                                                    <div style="font-size: 16px; color: #1f2937; font-weight: 700;">
+                                                        {{event_start_time}} - {{event_end_time}}</div>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td style="border-top: 1px solid #fed7aa; padding-bottom: 12px;"></td>
+                                            </tr>
+                                            <!-- Location -->
+                                            <tr>
+                                                <td>
+                                                    <div
+                                                        style="font-size: 12px; color: #f97316; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">
+                                                        Location</div>
+                                                    <div style="font-size: 16px; color: #1f2937; font-weight: 700;">658
+                                                        Gibraltar Court<br>Milpitas, CA 95035</div>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
 
-    </div>
+                            <!-- Closing -->
+                            <p style="margin: 0 0 8px 0; color: #374151; text-align: center; font-size: 14px;">We look
+                                forward to seeing you!</p>
+                            <p style="margin: 0; color: #6b7280; text-align: center; font-size: 14px;">
+                                Questions? Reply to this email or call our office at <br>
+                                <a href="tel:4085868688"
+                                    style="color: #f97316; font-weight: 700; text-decoration: none;">(408) 586-8688</a>.
+                            </p>
 
-    <!-- Footer -->
-    <div class="bg-blue-800 px-8 py-5 text-center">
-      <p class="text-blue-100 font-bold text-sm tracking-wide" style="font-family:'Playfair Display',serif;">—
-        Crosspoint Church</p>
-      <p class="text-blue-400 text-xs mt-1">658 Gibraltar Court, Milpitas, CA 95035</p>
-    </div>
+                        </td>
+                    </tr>
 
-  </div>
-
+                    <!-- Footer -->
+                    <tr>
+                        <td style="background-color: #1e40af; padding: 20px 32px; text-align: center;">
+                            <p
+                                style="margin: 0; color: #dbeafe; font-family: 'Playfair Display', Georgia, serif; font-weight: 700; font-size: 14px; letter-spacing: 0.05em;">
+                                — Crosspoint Church</p>
+                            <p style="margin: 4px 0 0 0; color: #60a5fa; font-size: 12px;">658 Gibraltar Court,
+                                Milpitas, CA 95035</p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
 </body>
 
 </html>
