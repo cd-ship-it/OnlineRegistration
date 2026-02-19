@@ -21,6 +21,8 @@ CREATE TABLE IF NOT EXISTS `registrations` (
   `digital_signature` varchar(200) DEFAULT NULL,
   `consent_agreed_at` datetime DEFAULT NULL,
   `photo_consent` varchar(10) DEFAULT NULL,
+  `receive_emails` varchar(3) NOT NULL DEFAULT 'yes',
+  `hear_from_us` varchar(255) DEFAULT NULL,
   `stripe_session_id` varchar(255) DEFAULT NULL,
   `status` varchar(20) NOT NULL DEFAULT 'draft',
   `total_amount_cents` int unsigned NOT NULL DEFAULT 0,
@@ -65,6 +67,19 @@ CREATE TABLE IF NOT EXISTS `registration_kids` (
   CONSTRAINT `fk_registration_kids_group` FOREIGN KEY (`group_id`) REFERENCES `groups` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Volunteers assigned to groups
+CREATE TABLE IF NOT EXISTS `group_volunteers` (
+  `id` int unsigned NOT NULL AUTO_INCREMENT,
+  `group_id` int unsigned NOT NULL,
+  `name` varchar(150) NOT NULL,
+  `email` varchar(255) NOT NULL,
+  `role` enum('Crew Leader','Assistant','Crew Member') NOT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_gv_group_id` (`group_id`),
+  CONSTRAINT `fk_gv_group` FOREIGN KEY (`group_id`) REFERENCES `groups` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Key-value settings (pricing, discounts, etc.)
 CREATE TABLE IF NOT EXISTS `settings` (
   `key` varchar(64) NOT NULL,
@@ -75,19 +90,25 @@ CREATE TABLE IF NOT EXISTS `settings` (
 
 -- Default settings
 INSERT INTO `settings` (`key`, `value`) VALUES
-  ('price_per_kid_cents', '5000'),
-  ('currency', 'usd'),
-  ('early_bird_start_date', ''),
-  ('early_bird_end_date', ''),
+  ('price_per_kid_cents',            '5000'),
+  ('currency',                       'usd'),
+  ('early_bird_start_date',          ''),
+  ('early_bird_end_date',            ''),
   ('early_bird_price_per_kid_cents', '0'),
-  ('multi_kid_price_per_kid_cents', '0'),
-  ('multi_kid_min_count', '2'),
-  ('max_kids_per_registration', '10'),
-  ('groups_max_children', '8'),
-  ('groups_count', '8'),
-  ('consent_form_url', '#'),
-  ('registration_open', '1'),
-  ('consent_content', '')
+  ('multi_kid_price_per_kid_cents',  '0'),
+  ('multi_kid_min_count',            '2'),
+  ('max_kids_per_registration',      '10'),
+  ('groups_max_children',            '8'),
+  ('groups_count',                   '8'),
+  ('consent_form_url',               '#'),
+  ('registration_open',              '1'),
+  ('consent_content',                ''),
+  ('event_description',              ''),
+  ('event_title',                    ''),
+  ('event_start_date',               ''),
+  ('event_end_date',                 ''),
+  ('event_start_time',               ''),
+  ('event_end_time',                 '')
 ON DUPLICATE KEY UPDATE `key` = `key`;
 
 -- Admin user for login (admin / password)
