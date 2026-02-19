@@ -32,10 +32,20 @@ CREATE TABLE IF NOT EXISTS `registrations` (
   KEY `idx_status` (`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Groups (for assigning kids; names editable in Assign Groups UI)
+CREATE TABLE IF NOT EXISTS `groups` (
+  `id` int unsigned NOT NULL AUTO_INCREMENT,
+  `name` varchar(100) NOT NULL DEFAULT '',
+  `sort_order` smallint unsigned NOT NULL DEFAULT 0,
+  PRIMARY KEY (`id`),
+  KEY `idx_sort_order` (`sort_order`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Kids per registration
 CREATE TABLE IF NOT EXISTS `registration_kids` (
   `id` int unsigned NOT NULL AUTO_INCREMENT,
   `registration_id` int unsigned NOT NULL,
+  `group_id` int unsigned DEFAULT NULL,
   `first_name` varchar(100) NOT NULL,
   `last_name` varchar(100) NOT NULL,
   `age` tinyint unsigned DEFAULT NULL,
@@ -50,7 +60,9 @@ CREATE TABLE IF NOT EXISTS `registration_kids` (
   `sort_order` smallint unsigned NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`),
   KEY `idx_registration_id` (`registration_id`),
-  CONSTRAINT `fk_registration_kids_registration` FOREIGN KEY (`registration_id`) REFERENCES `registrations` (`id`) ON DELETE CASCADE
+  KEY `idx_group_id` (`group_id`),
+  CONSTRAINT `fk_registration_kids_registration` FOREIGN KEY (`registration_id`) REFERENCES `registrations` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_registration_kids_group` FOREIGN KEY (`group_id`) REFERENCES `groups` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Key-value settings (pricing, discounts, etc.)
@@ -71,6 +83,8 @@ INSERT INTO `settings` (`key`, `value`) VALUES
   ('multi_kid_price_per_kid_cents', '0'),
   ('multi_kid_min_count', '2'),
   ('max_kids_per_registration', '10'),
+  ('groups_max_children', '8'),
+  ('groups_count', '8'),
   ('consent_form_url', '#'),
   ('registration_open', '1'),
   ('consent_content', '')

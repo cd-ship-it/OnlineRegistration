@@ -22,9 +22,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $registration_open = isset($_POST['registration_open']) ? '1' : '0';
     $consent_content = trim($_POST['consent_content'] ?? '');
     $event_description = trim($_POST['event_description'] ?? '');
+    $groups_max_children = (int) ($_POST['groups_max_children'] ?? 8);
+    $groups_count = (int) ($_POST['groups_count'] ?? 8);
 
     if ($price_per_kid_dollars < 0) $errors[] = 'Price per kid cannot be negative.';
     if ($max_kids_per_registration < 1) $errors[] = 'Max kids per registration must be at least 1.';
+    if ($groups_max_children < 1) $errors[] = 'Max children per group must be at least 1.';
+    if ($groups_count < 1) $errors[] = 'Number of groups must be at least 1.';
 
     if (empty($errors)) {
         $stmt = $pdo->prepare("INSERT INTO settings (`key`, `value`) VALUES (?, ?) ON DUPLICATE KEY UPDATE `value` = VALUES(`value`)");
@@ -39,6 +43,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->execute(['registration_open', $registration_open]);
         $stmt->execute(['consent_content', $consent_content]);
         $stmt->execute(['event_description', $event_description]);
+        $stmt->execute(['groups_max_children', (string) $groups_max_children]);
+        $stmt->execute(['groups_count', (string) $groups_count]);
         $message = 'Settings saved.';
     }
 }
@@ -55,6 +61,8 @@ $max_kids_per_registration = $settings['max_kids_per_registration'] ?? '10';
 $registration_open = ($settings['registration_open'] ?? '1') === '1';
 $consent_content = $settings['consent_content'] ?? '';
 $event_description = $settings['event_description'] ?? '';
+$groups_max_children = $settings['groups_max_children'] ?? '8';
+$groups_count = $settings['groups_count'] ?? '8';
 
 layout_head('Admin – Settings');
 ?>
@@ -63,6 +71,7 @@ layout_head('Admin – Settings');
     <h1 class="text-2xl font-bold text-gray-900">Pricing &amp; Settings</h1>
     <nav class="flex gap-4">
       <a href="<?= APP_URL ?>/admin/registrations" class="text-indigo-600 hover:underline">Registrations</a>
+      <a href="<?= APP_URL ?>/admin/assigngroups" class="text-indigo-600 hover:underline">Assign Groups</a>
       <a href="<?= APP_URL ?>/admin/logout" class="text-gray-600 hover:underline">Logout</a>
     </nav>
   </div>
@@ -139,6 +148,21 @@ layout_head('Admin – Settings');
       <label for="consent_content" class="block text-sm font-medium text-gray-700 mb-1">Consent content</label>
       <textarea id="consent_content" name="consent_content" rows="16" class="input-field w-full font-mono text-sm resize-y" placeholder="e.g.&#10;&#10;Consent for Activity Participation&#10;I grant permission for XXXX to participate...&#10;&#10;Consent for Transportation&#10;I grant permission for my child to be transported..."><?= htmlspecialchars($consent_content) ?></textarea>
       <p class="text-sm text-gray-500 mt-2">The Photo &amp; Video Release (Section 5) is always shown at the end of the consent form and cannot be edited here.</p>
+    </div>
+
+    <div class="card">
+      <h2 class="text-lg font-semibold mb-4">Assign Groups</h2>
+      <p class="text-sm text-gray-600 mb-3">Used on the <a href="<?= APP_URL ?>/admin/assigngroups" class="text-indigo-600 hover:underline">Assign Groups</a> page.</p>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label for="groups_max_children" class="block text-sm font-medium text-gray-700 mb-1">Max children per group</label>
+          <input type="number" id="groups_max_children" name="groups_max_children" min="1" value="<?= htmlspecialchars($groups_max_children) ?>" class="input-field w-32">
+        </div>
+        <div>
+          <label for="groups_count" class="block text-sm font-medium text-gray-700 mb-1">Number of groups</label>
+          <input type="number" id="groups_count" name="groups_count" min="1" value="<?= htmlspecialchars($groups_count) ?>" class="input-field w-32">
+        </div>
+      </div>
     </div>
 
     <div class="card">

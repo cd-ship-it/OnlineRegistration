@@ -19,6 +19,7 @@ RewriteRule ^admin$ admin/index.php [L]
 RewriteRule ^admin/settings$ admin/settings.php [L]
 RewriteRule ^admin/registrations$ admin/registrations.php [L]
 RewriteRule ^admin/registrations/view$ admin/registration-view.php [L]
+RewriteRule ^admin/assigngroups$ admin/assigngroups.php [L]
 RewriteRule ^admin/logout$ admin/logout.php [L]
 
 # Optional: uncomment to redirect *.php URLs to clean URLs

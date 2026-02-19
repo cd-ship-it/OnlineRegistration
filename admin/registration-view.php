@@ -41,6 +41,7 @@ layout_head('Admin – Registration #' . $id);
     <h1 class="text-2xl font-bold text-gray-900">Registration #<?= (int) $reg['id'] ?></h1>
     <nav class="flex gap-4 items-center">
       <a href="<?= APP_URL ?>/admin/registrations" class="text-indigo-600 hover:underline">← Back to list</a>
+      <a href="<?= APP_URL ?>/admin/assigngroups" class="text-indigo-600 hover:underline">Assign Groups</a>
       <a href="<?= APP_URL ?>/admin/settings" class="text-gray-600 hover:underline">Settings</a>
       <a href="<?= APP_URL ?>/admin/logout" class="text-gray-600 hover:underline">Logout</a>
     </nav>

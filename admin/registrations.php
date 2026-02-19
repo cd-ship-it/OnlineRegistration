@@ -70,6 +70,7 @@ layout_head('Admin – Registrations');
   <div class="flex flex-wrap justify-between items-center gap-4 mb-6">
     <h1 class="text-2xl font-bold text-gray-900">Registrations</h1>
     <nav class="flex gap-4 items-center">
+      <a href="<?= APP_URL ?>/admin/assigngroups" class="text-indigo-600 hover:underline">Assign Groups</a>
       <a href="<?= APP_URL ?>/admin/settings" class="text-indigo-600 hover:underline">Settings</a>
       <a href="<?= APP_URL ?>/admin/logout" class="text-gray-600 hover:underline">Logout</a>
       <a href="?export=csv<?= $status_filter ? '&status=' . urlencode($status_filter) : '' ?>" class="btn-secondary text-sm">Export CSV</a>
