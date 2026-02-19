@@ -24,6 +24,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $event_description = trim($_POST['event_description'] ?? '');
     $groups_max_children = (int) ($_POST['groups_max_children'] ?? 8);
     $groups_count = (int) ($_POST['groups_count'] ?? 8);
+    $event_title = trim($_POST['event_title'] ?? '');
+    $event_start_date = trim($_POST['event_start_date'] ?? '');
+    $event_end_date = trim($_POST['event_end_date'] ?? '');
+    $event_start_time = trim($_POST['event_start_time'] ?? '');
+    $event_end_time = trim($_POST['event_end_time'] ?? '');
 
     if ($price_per_kid_dollars < 0) $errors[] = 'Price per kid cannot be negative.';
     if ($max_kids_per_registration < 1) $errors[] = 'Max kids per registration must be at least 1.';
@@ -45,6 +50,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->execute(['event_description', $event_description]);
         $stmt->execute(['groups_max_children', (string) $groups_max_children]);
         $stmt->execute(['groups_count', (string) $groups_count]);
+        $stmt->execute(['event_title', $event_title]);
+        $stmt->execute(['event_start_date', $event_start_date]);
+        $stmt->execute(['event_end_date', $event_end_date]);
+        $stmt->execute(['event_start_time', $event_start_time]);
+        $stmt->execute(['event_end_time', $event_end_time]);
         $message = 'Settings saved.';
     }
 }
@@ -63,18 +73,17 @@ $consent_content = $settings['consent_content'] ?? '';
 $event_description = $settings['event_description'] ?? '';
 $groups_max_children = $settings['groups_max_children'] ?? '8';
 $groups_count = $settings['groups_count'] ?? '8';
+$event_title = $settings['event_title'] ?? '';
+$event_start_date = $settings['event_start_date'] ?? '';
+$event_end_date = $settings['event_end_date'] ?? '';
+$event_start_time = $settings['event_start_time'] ?? '';
+$event_end_time = $settings['event_end_time'] ?? '';
 
 layout_head('Admin – Settings');
+admin_nav('settings');
 ?>
-<div class="max-w-3xl mx-auto px-4 py-8">
-  <div class="flex justify-between items-center mb-8">
-    <h1 class="text-2xl font-bold text-gray-900">Pricing &amp; Settings</h1>
-    <nav class="flex gap-4">
-      <a href="<?= APP_URL ?>/admin/registrations" class="text-indigo-600 hover:underline">Registrations</a>
-      <a href="<?= APP_URL ?>/admin/assigngroups" class="text-indigo-600 hover:underline">Assign Groups</a>
-      <a href="<?= APP_URL ?>/admin/logout" class="text-gray-600 hover:underline">Logout</a>
-    </nav>
-  </div>
+<div class="max-w-3xl mx-auto px-4 py-6">
+  <h1 class="text-2xl font-bold text-gray-900 mb-8">Pricing &amp; Settings</h1>
 
   <?php if ($message): ?>
   <div class="card border-green-200 bg-green-50 text-green-800 mb-6"><?= htmlspecialchars($message) ?></div>
@@ -86,6 +95,34 @@ layout_head('Admin – Settings');
   <?php endif; ?>
 
   <form method="post" action="" class="space-y-6">
+    <div class="card">
+      <h2 class="text-lg font-semibold mb-4">Event Details</h2>
+      <div class="space-y-4">
+        <div>
+          <label for="event_title" class="block text-sm font-medium text-gray-700 mb-1">Event Title</label>
+          <input type="text" id="event_title" name="event_title" value="<?= htmlspecialchars($event_title) ?>" class="input-field" placeholder="e.g. Rainforest Falls VBS 2025">
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label for="event_start_date" class="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+            <input type="date" id="event_start_date" name="event_start_date" value="<?= htmlspecialchars($event_start_date) ?>" class="input-field">
+          </div>
+          <div>
+            <label for="event_end_date" class="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+            <input type="date" id="event_end_date" name="event_end_date" value="<?= htmlspecialchars($event_end_date) ?>" class="input-field">
+          </div>
+          <div>
+            <label for="event_start_time" class="block text-sm font-medium text-gray-700 mb-1">Start Time</label>
+            <input type="time" id="event_start_time" name="event_start_time" value="<?= htmlspecialchars($event_start_time) ?>" class="input-field">
+          </div>
+          <div>
+            <label for="event_end_time" class="block text-sm font-medium text-gray-700 mb-1">End Time</label>
+            <input type="time" id="event_end_time" name="event_end_time" value="<?= htmlspecialchars($event_end_time) ?>" class="input-field">
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="card">
       <h2 class="text-lg font-semibold mb-4">Event Description</h2>
       <p class="text-sm text-gray-600 mb-2">This description appears on the registration page. Include date, time, age requirements, and any other event details.</p>
