@@ -23,6 +23,9 @@ $grade_colors = [
 ];
 $grade_color_default = '#f3f4f6'; // gray-100
 
+// Production: qualify tables with database name when DB_NAME is set
+$db = (defined('DB_NAME') && DB_NAME !== '') ? '`' . str_replace('`', '``', DB_NAME) . '`.' : '';
+
 $message = '';
 $errors = [];
 $groups_count = (int) get_setting($pdo, 'groups_count', 8);
@@ -30,9 +33,9 @@ if ($groups_count < 1) $groups_count = 8;
 
 // POST: Add new group
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'add_group') {
-  $stmt = $pdo->query("SELECT COALESCE(MAX(sort_order), -1) + 1 AS next_order FROM groups");
+  $stmt = $pdo->query("SELECT COALESCE(MAX(sort_order), -1) + 1 AS next_order FROM {$db}groups");
   $next = (int) $stmt->fetch(PDO::FETCH_ASSOC)['next_order'];
-  $pdo->prepare("INSERT INTO groups (name, sort_order) VALUES (?, ?)")->execute(['New Group', $next]);
+  $pdo->prepare("INSERT INTO {$db}groups (name, sort_order) VALUES (?, ?)")->execute(['New Group', $next]);
   header('Location: ' . APP_URL . '/admin/assigngroups', true, 302);
   exit;
 }
@@ -41,8 +44,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'remove_group') {
   $gid = isset($_POST['group_id']) ? (int) $_POST['group_id'] : 0;
   if ($gid > 0) {
-    $pdo->prepare("UPDATE registration_kids SET group_id = NULL WHERE group_id = ?")->execute([$gid]);
-    $pdo->prepare("DELETE FROM groups WHERE id = ?")->execute([$gid]);
+    $pdo->prepare("UPDATE {$db}registration_kids SET group_id = NULL WHERE group_id = ?")->execute([$gid]);
+    $pdo->prepare("DELETE FROM {$db}groups WHERE id = ?")->execute([$gid]);
   }
   header('Location: ' . APP_URL . '/admin/assigngroups', true, 302);
   exit;
@@ -51,8 +54,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 // POST: Auto assign by grade — clear all, then assign so each group has only one grade (one grade per group)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'auto_assign') {
   $grade_aliases = ['Pre K' => 'PreK', 'pre k' => 'PreK', 'prek' => 'PreK'];
-  $groups_list = $pdo->query("SELECT id, sort_order FROM groups ORDER BY sort_order, id")->fetchAll(PDO::FETCH_ASSOC);
-  $kids_list = $pdo->query("SELECT id, last_grade_completed FROM registration_kids")->fetchAll(PDO::FETCH_ASSOC);
+  $groups_list = $pdo->query("SELECT id, sort_order FROM {$db}groups ORDER BY sort_order, id")->fetchAll(PDO::FETCH_ASSOC);
+  $kids_list = $pdo->query("SELECT id, last_grade_completed FROM {$db}registration_kids")->fetchAll(PDO::FETCH_ASSOC);
   $grade_order = array_keys($grade_colors);
   $other_grades = array_unique(array_filter(array_map(function ($k) { return isset($k['last_grade_completed']) && $k['last_grade_completed'] !== '' ? trim($k['last_grade_completed']) : null; }, $kids_list)));
   $extra = [];
@@ -66,9 +69,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
   $num_groups = count($groups_list);
   $pdo->beginTransaction();
   try {
-    $pdo->exec("UPDATE registration_kids SET group_id = NULL");
+    $pdo->exec("UPDATE {$db}registration_kids SET group_id = NULL");
     if ($num_groups > 0) {
-      $stmt_assign = $pdo->prepare("UPDATE registration_kids SET group_id = ? WHERE id = ?");
+      $stmt_assign = $pdo->prepare("UPDATE {$db}registration_kids SET group_id = ? WHERE id = ?");
       foreach ($kids_list as $k) {
         $grade_raw = isset($k['last_grade_completed']) && $k['last_grade_completed'] !== '' ? trim($k['last_grade_completed']) : null;
         $grade = $grade_raw !== null && isset($grade_aliases[$grade_raw]) ? $grade_aliases[$grade_raw] : $grade_raw;
@@ -94,21 +97,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 // Load all kids from registration_kids (age, grade, birthday for display)
 $stmt = $pdo->query("
   SELECT k.id, k.first_name, k.last_name, k.age, k.last_grade_completed, k.date_of_birth, k.group_id, k.registration_id
-  FROM registration_kids k
-  JOIN registrations r ON r.id = k.registration_id
+  FROM {$db}registration_kids k
+  JOIN {$db}registrations r ON r.id = k.registration_id
   ORDER BY k.age,k.date_of_birth, k.last_grade_completed,  k.last_name, k.first_name
 ");
 $kids = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Load groups and ensure we have at least groups_count
-$stmt = $pdo->query("SELECT id, name, sort_order FROM groups ORDER BY sort_order, id");
+$stmt = $pdo->query("SELECT id, name, sort_order FROM {$db}groups ORDER BY sort_order, id");
 $groups = $stmt->fetchAll(PDO::FETCH_ASSOC);
 $existing = count($groups);
 if ($existing < $groups_count) {
   for ($i = $existing; $i < $groups_count; $i++) {
-    $pdo->prepare("INSERT INTO groups (name, sort_order) VALUES (?, ?)")->execute(['Group ' . ($i + 1), $i]);
+    $pdo->prepare("INSERT INTO {$db}groups (name, sort_order) VALUES (?, ?)")->execute(['Group ' . ($i + 1), $i]);
   }
-  $stmt = $pdo->query("SELECT id, name, sort_order FROM groups ORDER BY sort_order, id");
+  $stmt = $pdo->query("SELECT id, name, sort_order FROM {$db}groups ORDER BY sort_order, id");
   $groups = $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
@@ -217,9 +220,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       $pdo->beginTransaction();
       foreach ($group_names as $gid => $name) {
         if (!in_array($gid, $valid_group_ids, true)) continue;
-        $pdo->prepare("UPDATE groups SET name = ? WHERE id = ?")->execute([$name ?: "Group $gid", $gid]);
+        $pdo->prepare("UPDATE {$db}groups SET name = ? WHERE id = ?")->execute([$name ?: "Group $gid", $gid]);
       }
-      $stmt_update = $pdo->prepare("UPDATE registration_kids SET group_id = ? WHERE id = ?");
+      $stmt_update = $pdo->prepare("UPDATE {$db}registration_kids SET group_id = ? WHERE id = ?");
       foreach ($valid_kid_ids as $kid_id) {
         $gid = isset($assignments[$kid_id]) ? $assignments[$kid_id] : null;
         $stmt_update->execute([$gid ?: null, $kid_id]);
