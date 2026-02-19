@@ -294,7 +294,7 @@ layout_head('Admin – Assign Groups');
   </div>
 
   <form id="assign-form" method="post" action="" class="space-y-6">
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start h-[400px]">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
       <!-- Left: Children (Unassigned) -->
       <div class="card">
         <h2 class="text-lg font-semibold text-gray-900 mb-2">Unassigned</h2>
