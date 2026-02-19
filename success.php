@@ -4,6 +4,7 @@ require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/price.php';
 require_once __DIR__ . '/includes/db_helper.php';
+require_once __DIR__ . '/includes/mailer.php';
 require_once __DIR__ . '/vendor/autoload.php';
 
 $session_id = $_GET['session_id'] ?? '';
@@ -22,70 +23,14 @@ try {
 $registration = null;
 if ($session && $session->payment_status === 'paid' && !empty($session->metadata->registration_id)) {
   $reg_id = (int) $session->metadata->registration_id;
-  if (success_mark_paid($pdo, $reg_id, $session_id, date('Y-m-d H:i:s'))) {
-    unset($_SESSION['vbs_registration_data']);
-    $registration = success_get_registration_with_kids($pdo, $reg_id);
-    // Production: send confirmation email to parent (once per paid registration)
-    if ($registration && APP_ENV === 'production') {
-      $to = $registration['email'];
-      $subject = 'Rainforest Falls VBS 2026 – Registration Confirmed | Crosspoint Church';
-      $parent_name = trim($registration['parent_first_name'] . ' ' . $registration['parent_last_name']);
-      $total_dollars = ((int) $registration['total_amount_cents']) / 100.0;
-      $total_str = format_money($total_dollars);
 
-      // HTML Email Template
-      $settings = get_settings($pdo);
-      $template = file_get_contents(__DIR__ . '/vbs-email-.html');
+  // Atomically finalize payment and send the confirmation email if this
+  // process wins the claim (idempotent — safe if webhook fires first).
+  payment_finalize_and_notify($pdo, $reg_id, $session_id);
 
-      $kids_list_html = [];
-      foreach ($registration['kids'] as $k) {
-        $line = htmlspecialchars($k['first_name'] . ' ' . $k['last_name']);
-        if (!empty($k['age']))
-          $line .= ' (' . (int) $k['age'] . ')';
-        $kids_list_html[] = $line;
-      }
-      $children_names = implode('<br>', $kids_list_html);
-
-      $replacements = [
-        '{{PARENT_FIRST_NAME}}' => htmlspecialchars($registration['parent_first_name'] ?? ''),
-        '{{PARENT_NAME}}' => htmlspecialchars($parent_name),
-        '{{TOTAL_PAID}}' => htmlspecialchars($total_str),
-        '{{CHILDREN_NAMES}}' => $children_names,
-        '{{event_title}}' => htmlspecialchars($settings['event_title'] ?? 'VBS 2026'),
-        '{{event_start_date}}' => htmlspecialchars($settings['event_start_date'] ?? ''),
-        '{{event_end_date}}' => htmlspecialchars($settings['event_end_date'] ?? ''),
-        '{{event_start_time}}' => htmlspecialchars($settings['event_start_time'] ?? ''),
-        '{{event_end_time}}' => htmlspecialchars($settings['event_end_time'] ?? ''),
-      ];
-
-      $body = strtr($template, $replacements);
-      $reply_to = 'cm@crosspointchurchsv.org';
-      $headers = [
-        'From: Crosspoint Church VBS <' . $reply_to . '>',
-        'Reply-To: ' . $reply_to,
-        'Cc: cd@crosspointchurchsv.org',
-        'MIME-Version: 1.0',
-        'Content-Type: text/html; charset=UTF-8',
-        'X-Mailer: PHP/' . phpversion(),
-      ];
-      $sent = mail($to, $subject, $body, implode("\r\n", $headers));
-      if ($sent) {
-        app_log('high', 'Email', 'Confirmation email sent', [
-          'to' => $to,
-          'subject' => $subject,
-          'registration_id' => $reg_id,
-          'sent_at' => (new DateTimeImmutable('now', new DateTimeZone('America/Los_Angeles')))->format('Y-m-d H:i:s T'),
-        ]);
-      } else {
-        app_log('high', 'Email', 'Confirmation email FAILED', [
-          'to' => $to,
-          'subject' => $subject,
-          'registration_id' => $reg_id,
-          'attempted_at' => (new DateTimeImmutable('now', new DateTimeZone('America/Los_Angeles')))->format('Y-m-d H:i:s T'),
-        ]);
-      }
-    }
-  }
+  // Always load the registration for the thank-you page, regardless of who sent the email.
+  $registration = success_get_registration_with_kids($pdo, $reg_id);
+  unset($_SESSION['vbs_registration_data']);
 }
 
 require_once __DIR__ . '/includes/layout.php';

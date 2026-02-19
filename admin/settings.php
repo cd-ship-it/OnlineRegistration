@@ -12,6 +12,7 @@ $message = '';
 $errors = [];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    csrf_verify();
     $price_per_kid_dollars = (float) ($_POST['price_per_kid'] ?? 0);
     $currency = trim($_POST['currency'] ?? 'usd');
     $early_bird_start = trim($_POST['early_bird_start_date'] ?? '');
@@ -97,6 +98,7 @@ admin_nav('settings');
   <?php endif; ?>
 
   <form method="post" action="" class="space-y-6">
+    <?= csrf_input() ?>
     <div class="card">
       <h2 class="text-lg font-semibold mb-4">Event Details</h2>
       <div class="space-y-4">

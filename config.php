@@ -46,3 +46,10 @@ define('STRIPE_PUBLIC_KEY', trim(env('StripePublicKey', '') ?: env('STRIPE_PUBLI
 define('STRIPE_SECRET_KEY', trim(env('StripeSecretKey', '') ?: env('STRIPE_SECRET_KEY', '')));
 define('ADMIN_USER', env('ADMIN_USER', 'admin'));
 define('ADMIN_PASSWORD_HASH', env('ADMIN_PASSWORD_HASH', ''));
+
+define('GOOGLE_CLIENT_ID', env('GOOGLE_CLIENT_ID', ''));
+define('GOOGLE_CLIENT_SECRET', env('GOOGLE_CLIENT_SECRET', ''));
+define('GOOGLE_REDIRECT_URL', APP_URL . '/admin/google-callback');
+define('ADMIN_WHITELIST', env('ADMIN_WHITELIST', 'fng@crosspointchurchsv.org'));
+
+

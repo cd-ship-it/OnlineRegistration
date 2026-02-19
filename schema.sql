@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS `registrations` (
   `hear_from_us` varchar(255) DEFAULT NULL,
   `stripe_session_id` varchar(255) DEFAULT NULL,
   `status` varchar(20) NOT NULL DEFAULT 'draft',
+  `confirmation_email_sent` tinyint(1) NOT NULL DEFAULT 0,
   `total_amount_cents` int unsigned NOT NULL DEFAULT 0,
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

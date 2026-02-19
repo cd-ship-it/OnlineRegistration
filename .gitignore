@@ -5,5 +5,8 @@
 /logs/
 *.xls
 *.xlsx
+# Ignore loose test/scratch files at the root, but allow the tests/ directory
 *test*.*
+!tests/
+!tests/**
 Untitled

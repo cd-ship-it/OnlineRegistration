@@ -15,9 +15,27 @@ function layout_head($title = 'VBS Registration') {
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="<?= $base ?>/css/app.css">
+  <link rel="stylesheet" href="<?= $base ?>/css/app.css?v=<?= filemtime(__DIR__ . '/../css/app.css') ?>">
+  <script>
+    /* ── Kid-card palette ───────────────────────────────────────────────
+       10 light background colours that rotate as children are added.
+       Edit any hex here; they're intentionally soft so text stays readable.
+    ── */
+    window.kidCardColors = [
+      '#ecfdf5', /* emerald-50   */
+      '#eff6ff', /* blue-50      */
+      '#fef9c3', /* yellow-50    */
+      '#fdf4ff', /* fuchsia-50   */
+      '#fff7ed', /* orange-50    */
+      '#f0f9ff', /* sky-50       */
+      '#f7fee7', /* lime-50      */
+      '#fff1f2', /* rose-50      */
+      '#f5f3ff', /* violet-50    */
+      '#ecfeff', /* cyan-50      */
+    ];
+  </script>
 </head>
-<body class="min-h-screen font-sans text-gray-900 bg-gradient-to-br from-orange-50 via-amber-50 to-sky-100">
+<body class="min-h-screen font-sans text-gray-900 bg-gradient-to-br from-orange-50 via-green-50 to-sky-100">
 <?php
 }
 

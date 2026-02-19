@@ -10,21 +10,14 @@ require_admin();
 
 $status_filter = $_GET['status'] ?? '';
 $sort = $_GET['sort'] ?? 'date';
-$dir = strtolower($_GET['dir'] ?? 'desc');
-if (!in_array($dir, ['asc', 'desc'], true)) $dir = 'desc';
+$dir  = strtolower($_GET['dir'] ?? 'desc');
 
-$order_columns = [
-    'parent' => 'r.parent_last_name ' . $dir . ', r.parent_first_name ' . $dir,
-    'email'  => 'r.email ' . $dir,
-    'kids'   => 'kid_count ' . $dir,
-    'photo'  => 'r.photo_consent ' . $dir,
-    'status' => 'r.status ' . $dir,
-    'date'   => 'r.created_at ' . $dir,
-];
-$sort_key  = isset($order_columns[$sort]) ? $sort : 'date';
-$order_sql = $order_columns[$sort_key];
+// Validation and whitelist mapping are now fully inside admin_get_registrations().
+// $sort_key is kept here only to drive the active-column highlight in the UI.
+$valid_sort_keys = ['parent', 'email', 'kids', 'photo', 'status', 'date'];
+$sort_key = in_array($sort, $valid_sort_keys, true) ? $sort : 'date';
 
-$registrations = admin_get_registrations($pdo, $status_filter, $order_sql);
+$registrations = admin_get_registrations($pdo, $status_filter, $sort, $dir);
 $all_kids      = admin_get_kids_list($pdo, $status_filter);
 
 function sort_url($list_url, $status_filter, $sort, $dir, $column) {

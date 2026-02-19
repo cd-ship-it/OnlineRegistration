@@ -127,9 +127,12 @@
 
     .card:nth-child(1) { background: var(--blue);   border-color: #BBDEFB; animation-delay: 0.1s; }
     .card:nth-child(2) { background: var(--green);  border-color: #C8E6C9; animation-delay: 0.2s; }
-    .card:nth-child(3) { background: var(--yellow);  border-color: #FFF9C4; animation-delay: 0.3s; }
+    .card:nth-child(3) { background: var(--yellow); border-color: #FFF9C4; animation-delay: 0.3s; }
     .card:nth-child(4) { background: var(--blue);   border-color: #BBDEFB; animation-delay: 0.4s; }
     .card:nth-child(5) { background: var(--green);  border-color: #C8E6C9; animation-delay: 0.5s; }
+    .card:nth-child(6) { background: var(--red); border-color: #716709; animation-delay: 0.6s; }
+    .card:nth-child(7) { background: var(--red); border-color: #000000; animation-delay: 0.6s; 
+    }
 
     @keyframes fadeUp {
       to { opacity: 1; transform: translateY(0); }
@@ -158,6 +161,12 @@
       color: #3D5166;
     }
 
+    .card-text a {
+      color: var(--navy);
+      font-weight: 600;
+      text-decoration: underline;
+    }
+
     /* ── FOOTER ── */
     .footer-block {
       margin-top: 48px;
@@ -166,7 +175,7 @@
       padding: 32px 28px;
       text-align: center;
       opacity: 0;
-      animation: fadeUp 0.5s ease 0.7s forwards;
+      animation: fadeUp 0.5s ease 0.8s forwards;
     }
 
     .footer-block p {
@@ -252,7 +261,7 @@
       color: #3D5166;
     }
     .full-notice .contact-block strong { color: var(--navy); }
-    .full-notice .contact-block a { color: var(--navy); font-weight: 600; }
+    .full-notice .contact-block a { color: var(--navy); font-weight: 600; text-decoration: underline; }
   </style>
 </head>
 <body>
@@ -305,7 +314,6 @@
         </div>
       </div>
 
-
       <div class="card">
         <div class="card-emoji">📧</div>
         <div class="card-body">
@@ -313,12 +321,13 @@
         </div>
       </div>
 
-      <!-- <div class="card">
-        <div class="card-emoji">🗑️</div>
+      <div class="card">
+        <div class="card-emoji">💳</div>
         <div class="card-body">
-          <div class="card-title">When VBS ends, we securely disposed your data.</div>
+          <div class="card-title">Your payment info is secure with Stripe.</div>
+          <div class="card-text">We never see or store your credit card details — all payments are processed securely through <a href="https://stripe.com" target="_blank">Stripe</a>.</div>
         </div>
-      </div> -->
+      </div>
 
     </div>
 
@@ -355,7 +364,10 @@
       <h3>3. We Do Not Share or Sell Your Information</h3>
       <p>Crosspoint Church does not sell, rent, trade, or otherwise share your personal information or your child(ren)'s personal information with any third party for commercial or marketing purposes. Your information is used exclusively for the administration of the VBS program and related church communications. We will never use your personal data for any purpose beyond what is described in this notice without first obtaining your explicit consent.</p>
 
-      <h3>4. Our Commitment to Children's Privacy</h3>
+      <h3>4. Payment Processing</h3>
+      <p>VBS registration fees and other payments are processed securely through Stripe, a third-party payment processor. Crosspoint Church does not have access to, nor does it store, your complete credit card information. When you make a payment, your payment details are transmitted directly to Stripe's secure servers. For more information about how Stripe handles your payment information, please review <a href="https://stripe.com/privacy" target="_blank">Stripe's Privacy Policy</a>.</p>
+
+      <h3>5. Our Commitment to Children's Privacy</h3>
       <p>Crosspoint Church is deeply committed to protecting the privacy of children in our programs. We take the following steps to safeguard your child(ren)'s personal information:</p>
       <ul>
         <li>Access to personal information is strictly limited to authorized staff and volunteers who require it to perform their responsibilities</li>
@@ -364,10 +376,7 @@
         <li>Photo and video of children are only used when explicit permission has been granted by a parent or guardian</li>
       </ul>
 
-      <!-- <h3>5. Data Retention</h3>
-      <p>Personal information collected for the VBS program is retained only for as long as necessary to fulfill the purposes described in this notice. Registration and medical information is securely disposed of following the conclusion of the program, unless otherwise required to be retained for safety or legal purposes.</p> -->
-
-      <h3>5. Your Rights</h3>
+      <h3>6. Your Rights</h3>
       <p>As a parent or guardian, you have the right to request access to the personal information we hold about your child(ren), to request corrections to any inaccurate information, or to request that your information be removed from our records following the conclusion of the program. To make such a request, please contact us using the information provided below.</p>
 
       <h3>7. Contact Us</h3>

@@ -23,10 +23,35 @@ function db_prefix(): string
 
 /**
  * Return registrations with kid count, optionally filtered by status.
- * $order_sql must be pre-validated by the caller from a whitelist.
+ *
+ * Sort is controlled by a whitelisted key + direction so no raw SQL ever
+ * travels from the caller into the query.
+ *
+ * @param string $sort_key  One of: 'parent', 'email', 'kids', 'photo', 'status', 'date'.
+ *                          Unknown keys fall back to 'date'.
+ * @param string $dir       'asc' or 'desc'. Anything else falls back to 'desc'.
  */
-function admin_get_registrations(PDO $pdo, string $status_filter, string $order_sql): array
-{
+function admin_get_registrations(
+    PDO    $pdo,
+    string $status_filter,
+    string $sort_key = 'date',
+    string $dir      = 'desc'
+): array {
+    // Sanitise direction — only two valid values exist.
+    $dir = ($dir === 'asc') ? 'asc' : 'desc';
+
+    // Whitelist: sort key → SQL column expression ({dir} is substituted below).
+    $sort_map = [
+        'parent' => 'r.parent_last_name {dir}, r.parent_first_name {dir}',
+        'email'  => 'r.email {dir}',
+        'kids'   => 'kid_count {dir}',
+        'photo'  => 'r.photo_consent {dir}',
+        'status' => 'r.status {dir}',
+        'date'   => 'r.created_at {dir}',
+    ];
+    $template  = $sort_map[$sort_key] ?? $sort_map['date'];
+    $order_sql = str_replace('{dir}', $dir, $template);
+
     $db = db_prefix();
     $q  = "SELECT r.*, (SELECT COUNT(*) FROM {$db}registration_kids k WHERE k.registration_id = r.id) AS kid_count
            FROM {$db}registrations r
@@ -192,20 +217,89 @@ function groups_get_volunteer(PDO $pdo, int $vid): ?array
     return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
 }
 
-// ─── Success page (success.php) ───────────────────────────────────────────────
+// ─── Success page / Stripe webhook ────────────────────────────────────────────
 
 /**
- * Mark a draft registration as paid. Returns true if a row was updated.
+ * Atomically finalize a paid registration and claim the right to send the
+ * confirmation email.
+ *
+ * Uses SELECT … FOR UPDATE so that success.php and stripe-webhook.php cannot
+ * both claim the email send — exactly one caller gets the registration data
+ * back, the other gets null.
+ *
+ * Behaviour:
+ *  - Sets status = 'paid' and stripe_session_id (idempotent; safe to call even
+ *    if the webhook already flipped the status).
+ *  - If confirmation_email_sent is already 1  → commits and returns null.
+ *  - Otherwise sets confirmation_email_sent = 1, commits, and returns the full
+ *    registration row with a nested 'kids' array for email-building.
+ *
+ * @return array|null  Registration data when the caller should send the email;
+ *                     null when the email was already claimed by another process.
  */
-function success_mark_paid(PDO $pdo, int $reg_id, string $session_id, string $now): bool
+function registration_finalize_payment(PDO $pdo, int $reg_id, string $session_id): ?array
 {
-    $db   = db_prefix();
-    $stmt = $pdo->prepare(
-        "UPDATE {$db}registrations SET status = 'paid', stripe_session_id = ?, updated_at = ?
-         WHERE id = ? AND status = 'draft'"
-    );
-    $stmt->execute([$session_id, $now, $reg_id]);
-    return $stmt->rowCount() > 0;
+    $db  = db_prefix();
+    $now = date('Y-m-d H:i:s');
+
+    try {
+        $pdo->beginTransaction();
+
+        // Lock the row for the duration of this transaction
+        $stmt = $pdo->prepare(
+            "SELECT id, status, confirmation_email_sent
+             FROM {$db}registrations WHERE id = ? FOR UPDATE"
+        );
+        $stmt->execute([$reg_id]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$row) {
+            $pdo->rollBack();
+            app_log('high', 'Payment', 'registration_finalize_payment: registration not found', [
+                'reg_id' => $reg_id,
+            ]);
+            return null;
+        }
+
+        // Mark as paid (idempotent — no-op if already paid)
+        if ($row['status'] !== 'paid') {
+            $pdo->prepare(
+                "UPDATE {$db}registrations
+                 SET status = 'paid', stripe_session_id = ?, updated_at = ?
+                 WHERE id = ?"
+            )->execute([$session_id, $now, $reg_id]);
+        }
+
+        // Check whether another process already claimed the email send
+        if ((int) $row['confirmation_email_sent'] === 1) {
+            $pdo->commit();
+            app_log('high', 'Payment', 'registration_finalize_payment: email already claimed', [
+                'reg_id' => $reg_id,
+            ]);
+            return null;
+        }
+
+        // Claim the email send right
+        $pdo->prepare(
+            "UPDATE {$db}registrations SET confirmation_email_sent = 1 WHERE id = ?"
+        )->execute([$reg_id]);
+
+        $pdo->commit();
+
+        app_log('high', 'Payment', 'registration_finalize_payment: email claimed', [
+            'reg_id' => $reg_id,
+        ]);
+
+        return success_get_registration_with_kids($pdo, $reg_id);
+
+    } catch (Exception $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        app_log('high', 'Payment', 'registration_finalize_payment: exception', [
+            'reg_id' => $reg_id,
+            'error'  => $e->getMessage(),
+        ]);
+        return null;
+    }
 }
 
 /**

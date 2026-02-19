@@ -31,6 +31,7 @@ $errors  = [];
 
 // POST: Auto-assign every kid to a group by grade
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'auto_assign') {
+  csrf_verify();
   $grade_aliases = ['Pre K' => 'PreK', 'pre k' => 'PreK', 'prek' => 'PreK'];
   ag_auto_assign_by_grade($pdo, $db, array_keys($grade_colors), $grade_aliases);
   header('Location: ' . APP_URL . '/admin/assigngroups?auto_assigned=1', true, 302);
@@ -114,6 +115,7 @@ if (isset($_GET['export']) && $_GET['export'] === '1') {
 
 // POST: Save kid → group assignments
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+  csrf_verify();
   $assignments_raw = $_POST['assignments'] ?? [];
   $assignments     = [];
 
@@ -334,6 +336,7 @@ admin_nav('assigngroups');
         </div>
       </div>
     </div>
+    <?= csrf_input() ?>
     <input type="hidden" name="assignments" id="assignments-input" value="">
     <button type="submit" class="btn-primary">Save assignments</button>
 
@@ -454,6 +457,8 @@ admin_nav('assigngroups');
     openKidRegistrationView(card);
   });
 
+  var csrfToken = <?= json_encode(csrf_generate()) ?>;
+
   function postAction(action, extra) {
     var f = document.createElement('form');
     f.method = 'POST';
@@ -463,6 +468,11 @@ admin_nav('assigngroups');
     i.value = action;
     i.type = 'hidden';
     f.appendChild(i);
+    var csrf = document.createElement('input');
+    csrf.type  = 'hidden';
+    csrf.name  = 'csrf_token';
+    csrf.value = csrfToken;
+    f.appendChild(csrf);
     if (extra) for (var k in extra) {
       var j = document.createElement('input');
       j.name = k;

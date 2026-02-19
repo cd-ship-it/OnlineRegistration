@@ -3,11 +3,50 @@
 @tailwind utilities;
 
 @layer components {
+  /* Generic indigo primary — kept for admin panel reuse */
   .btn-primary   { @apply px-4 py-2 rounded-lg font-medium bg-indigo-600 text-white hover:bg-indigo-700 transition; }
   .btn-secondary { @apply px-4 py-2 rounded-lg font-medium bg-gray-200 text-gray-800 hover:bg-gray-300 transition; }
-  .input-field   { @apply w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500; }
+
+  /* Rainforest Falls theme buttons */
+  .btn-emerald { @apply px-4 py-2 rounded-lg font-medium bg-emerald-600 text-white hover:bg-emerald-700 active:bg-emerald-800 transition disabled:opacity-40 disabled:cursor-not-allowed disabled:pointer-events-none; }
+  .btn-orange  { @apply px-4 py-2 rounded-lg font-medium bg-transparent border-2 border-orange-500 text-orange-600 hover:bg-orange-500 hover:text-white active:bg-orange-600 active:border-orange-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:pointer-events-none; }
+
+  /* Focus ring updated to emerald for register form */
+  .input-field   { @apply w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500; }
+  .field-error   { @apply border-red-500 ring-2 ring-red-200; }
   .card          { @apply bg-white rounded-xl shadow-sm border border-gray-100 p-6 transition-colors duration-150; }
   .card:focus-within  { @apply bg-sky-50; }
   .kid-block          { @apply transition-colors duration-150; }
   .kid-block:focus-within { @apply bg-sky-50; }
+
+  /* ── Progress stepper ───────────────────────────────────────────────
+     Colors to tweak:
+       Active step  →  --stepper-active   (#0284c7  sky-600 blue)
+       Done step    →  --stepper-done     (#059669  emerald-600 green)
+       Done line    →  same as done step
+  ── */
+  .stepper-step { display:flex; flex-direction:column; align-items:center; }
+
+  .stepper-icon {
+    width: 2.5rem; height: 2.5rem; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 600; font-size: 0.875rem;
+    transition: background .2s, color .2s, border-color .2s;
+  }
+
+  .stepper-step.upcoming  .stepper-icon { border: 2px solid #d1d5db; color: #9ca3af; background: white; }
+  .stepper-step.active    .stepper-icon { background: #0284c7; color: white; border: 2px solid #0284c7; }
+  .stepper-step.completed .stepper-icon { background: #059669; color: white; border: 2px solid #059669; }
+
+  .stepper-label { margin-top:.4rem; font-size:.7rem; font-weight:500; text-align:center; }
+
+  .stepper-step.upcoming  .stepper-label { color: #9ca3af; }
+  .stepper-step.active    .stepper-label { color: #0284c7; font-weight: 700; }
+  .stepper-step.completed .stepper-label { color: #059669; }
+
+  .stepper-connector {
+    flex: 1; height: 2px; background: #e5e7eb;
+    margin: 0 .5rem; margin-bottom: 1.5rem; transition: background .2s;
+  }
+  .stepper-connector.done { background: #059669; }
 }

@@ -22,6 +22,8 @@ RewriteRule ^admin/registrations/view$ admin/registration-view.php [L]
 RewriteRule ^admin/assigngroups$ admin/assigngroups.php [L]
 RewriteRule ^admin/groups$ admin/groups.php [L]
 RewriteRule ^admin/logout$ admin/logout.php [L]
+RewriteRule ^admin/google-callback$ admin/google-callback.php [L]
+
 
 # Optional: uncomment to redirect *.php URLs to clean URLs
 # RewriteCond %{THE_REQUEST} \s/+(.+?)\.php[\s?] [NC]

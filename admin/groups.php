@@ -22,6 +22,7 @@ function redirect_groups()
 // ─── POST handlers ────────────────────────────────────────────────────────────
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+  csrf_verify();
   $action = $_POST['action'] ?? '';
 
   // CREATE GROUP
@@ -157,6 +158,7 @@ admin_nav('groups');
       <div class="card">
         <h2 class="text-base font-semibold text-gray-900 mb-3">Create New Group</h2>
         <form method="post" action="">
+          <?= csrf_input() ?>
           <input type="hidden" name="action" value="create_group">
           <div class="mb-3">
             <label class="block text-sm font-medium text-gray-700 mb-1">Group Name <span
@@ -193,6 +195,7 @@ admin_nav('groups');
                       class="text-xs text-indigo-600 hover:underline">Rename</button>
                     <form method="post" action="" class="inline"
                       onsubmit="return confirm('Delete group «<?= htmlspecialchars(addslashes($g['name'])) ?>»? Kids will be moved to Unassigned.');">
+                      <?= csrf_input() ?>
                       <input type="hidden" name="action" value="delete_group">
                       <input type="hidden" name="group_id" value="<?= $gid ?>">
                       <button type="submit" class="text-xs text-red-600 hover:underline">Delete</button>
@@ -201,6 +204,7 @@ admin_nav('groups');
                 </div>
                 <!-- Rename form (hidden) -->
                 <form method="post" action="" id="group-rename-<?= $gid ?>" class="hidden flex gap-2 items-center">
+                  <?= csrf_input() ?>
                   <input type="hidden" name="action" value="rename_group">
                   <input type="hidden" name="group_id" value="<?= $gid ?>">
                   <input type="text" name="group_name" required class="input-field text-sm py-1 flex-1"
@@ -236,6 +240,7 @@ admin_nav('groups');
             <div id="add-form-<?= $gid ?>"
               class="<?= (!empty($errors) && (int) ($_POST['group_id'] ?? 0) === $gid && ($_POST['action'] ?? '') === 'add_volunteer') ? '' : 'hidden' ?> border-b border-gray-100 bg-indigo-50/40 px-4 py-4">
               <form method="post" action="">
+                <?= csrf_input() ?>
                 <input type="hidden" name="action" value="add_volunteer">
                 <input type="hidden" name="group_id" value="<?= $gid ?>">
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
@@ -279,6 +284,7 @@ admin_nav('groups');
               <div class="border-b border-gray-100 bg-amber-50/40 px-4 py-4">
                 <p class="text-xs font-semibold text-amber-700 mb-2">Editing volunteer</p>
                 <form method="post" action="">
+                  <?= csrf_input() ?>
                   <input type="hidden" name="action" value="edit_volunteer">
                   <input type="hidden" name="vol_id" value="<?= (int) $edit_vol['id'] ?>">
                   <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
@@ -348,8 +354,9 @@ admin_nav('groups');
                       <td class="px-4 py-2 text-right whitespace-nowrap">
                         <a href="<?= APP_URL ?>/admin/groups?edit_vol=<?= (int) $v['id'] ?>"
                           class="text-xs text-indigo-600 hover:underline mr-3">Edit</a>
-                        <form method="post" action="" class="inline"
+                          <form method="post" action="" class="inline"
                           onsubmit="return confirm('Remove <?= htmlspecialchars(addslashes($v['name'])) ?>?');">
+                          <?= csrf_input() ?>
                           <input type="hidden" name="action" value="delete_volunteer">
                           <input type="hidden" name="vol_id" value="<?= (int) $v['id'] ?>">
                           <button type="submit" class="text-xs text-red-600 hover:underline">Remove</button>
