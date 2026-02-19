@@ -1,0 +1,11 @@
+{
+  "name": "online-registration",
+  "private": true,
+  "scripts": {
+    "build": "tailwindcss -i ./css/input.css -o ./css/app.css --minify",
+    "dev":   "tailwindcss -i ./css/input.css -o ./css/app.css --watch"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.0"
+  }
+}
