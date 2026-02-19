@@ -48,6 +48,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
   exit;
 }
 
+// POST: Auto assign by grade — clear all, then assign so each group has only one grade (one grade per group)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'auto_assign') {
+  $grade_aliases = ['Pre K' => 'PreK', 'pre k' => 'PreK', 'prek' => 'PreK'];
+  $groups_list = $pdo->query("SELECT id, sort_order FROM groups ORDER BY sort_order, id")->fetchAll(PDO::FETCH_ASSOC);
+  $kids_list = $pdo->query("SELECT id, last_grade_completed FROM registration_kids")->fetchAll(PDO::FETCH_ASSOC);
+  $grade_order = array_keys($grade_colors);
+  $other_grades = array_unique(array_filter(array_map(function ($k) { return isset($k['last_grade_completed']) && $k['last_grade_completed'] !== '' ? trim($k['last_grade_completed']) : null; }, $kids_list)));
+  $extra = [];
+  foreach ($other_grades as $g) {
+    $canonical = isset($grade_aliases[$g]) ? $grade_aliases[$g] : $g;
+    if (!in_array($canonical, $grade_order, true)) $extra[] = $canonical;
+  }
+  sort($extra, SORT_STRING);
+  $grade_order = array_values(array_merge($grade_order, $extra));
+  $grade_to_index = array_flip($grade_order);
+  $num_groups = count($groups_list);
+  $pdo->beginTransaction();
+  try {
+    $pdo->exec("UPDATE registration_kids SET group_id = NULL");
+    if ($num_groups > 0) {
+      $stmt_assign = $pdo->prepare("UPDATE registration_kids SET group_id = ? WHERE id = ?");
+      foreach ($kids_list as $k) {
+        $grade_raw = isset($k['last_grade_completed']) && $k['last_grade_completed'] !== '' ? trim($k['last_grade_completed']) : null;
+        $grade = $grade_raw !== null && isset($grade_aliases[$grade_raw]) ? $grade_aliases[$grade_raw] : $grade_raw;
+        $gid = null;
+        if ($grade !== null && isset($grade_to_index[$grade])) {
+          $idx = $grade_to_index[$grade];
+          if ($idx < $num_groups) {
+            $gid = (int) $groups_list[$idx]['id'];
+          }
+        }
+        $stmt_assign->execute([$gid, $k['id']]);
+      }
+    }
+    $pdo->commit();
+  } catch (Exception $e) {
+    $pdo->rollBack();
+    throw $e;
+  }
+  header('Location: ' . APP_URL . '/admin/assigngroups?auto_assigned=1', true, 302);
+  exit;
+}
+
 // Load all kids from registration_kids (age, grade, birthday for display)
 $stmt = $pdo->query("
   SELECT k.id, k.first_name, k.last_name, k.age, k.last_grade_completed, k.date_of_birth, k.group_id, k.registration_id
@@ -92,6 +135,47 @@ $unique_ages = array_unique(array_filter(array_map(function ($k) { return isset(
 $unique_grades = array_unique(array_filter(array_map(function ($k) { return isset($k['last_grade_completed']) && $k['last_grade_completed'] !== '' ? $k['last_grade_completed'] : null; }, $kids)));
 sort($unique_ages, SORT_NUMERIC);
 sort($unique_grades, SORT_STRING);
+$has_assignments = count(array_filter($kids, function ($k) { return isset($k['group_id']) && $k['group_id'] !== null && $k['group_id'] !== ''; })) > 0;
+
+// Export view: open in new tab, two columns, one group per card
+if (isset($_GET['export']) && $_GET['export'] === '1') {
+  layout_head('Group Assignments – Export');
+  ?>
+  <div class="max-w-6xl mx-auto px-4 py-8">
+    <h1 class="text-2xl font-bold text-gray-900 mb-6">Group Assignments</h1>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+      <?php foreach ($groups as $g):
+        $group_kids = $by_group[(int) $g['id']] ?? [];
+      ?>
+      <div class="card border border-gray-200 shadow-sm">
+        <h2 class="text-lg font-semibold text-gray-900 mb-3 pb-2 border-b border-gray-200"><?= htmlspecialchars($g['name'] ?: 'Group ' . (int) $g['id']) ?></h2>
+        <ul class="space-y-1.5 text-sm text-gray-700">
+          <?php foreach ($group_kids as $k):
+            $age = $k['age'] !== null && $k['age'] !== '' ? (int) $k['age'] : null;
+            $grade = isset($k['last_grade_completed']) && $k['last_grade_completed'] !== '' ? $k['last_grade_completed'] : null;
+            $dob = null;
+            if (!empty($k['date_of_birth'])) { $ts = strtotime($k['date_of_birth']); $dob = ($ts !== false) ? date('m/d/Y', $ts) : null; }
+            $parts = array_filter([
+              $age !== null ? "Age: $age" : null,
+              $grade !== null ? "Grade: $grade" : null,
+              $dob !== null ? "BD: $dob" : null
+            ]);
+            $meta = $parts ? ' (' . implode('. ', $parts) . ')' : '';
+          ?>
+          <li><?= htmlspecialchars($k['first_name'] . ' ' . $k['last_name']) ?><?= $meta ? htmlspecialchars($meta) : '' ?></li>
+          <?php endforeach; ?>
+          <?php if (empty($group_kids)): ?>
+          <li class="text-gray-400 italic">No children assigned</li>
+          <?php endif; ?>
+        </ul>
+      </div>
+      <?php endforeach; ?>
+    </div>
+  </div>
+  <?php
+  layout_footer();
+  exit;
+}
 
 // POST: save assignments and group names
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -151,6 +235,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $saved = isset($_GET['saved']) && $_GET['saved'] === '1';
+$auto_assigned = isset($_GET['auto_assigned']) && $_GET['auto_assigned'] === '1';
 layout_head('Admin – Assign Groups');
 ?>
 
@@ -159,6 +244,8 @@ layout_head('Admin – Assign Groups');
     <div class="flex items-center gap-3">
       <h1 class="text-2xl font-bold text-gray-900">Assign Groups</h1>
       <button type="button" class="btn-primary" onclick="document.getElementById('assign-form').requestSubmit()">Save Assignments</button>
+      <button type="button" id="auto-assign-btn" class="btn-secondary" data-has-assignments="<?= $has_assignments ? '1' : '0' ?>">Auto assign</button>
+      <a href="<?= APP_URL ?>/admin/assigngroups?export=1" target="_blank" rel="noopener noreferrer" class="btn-secondary">Export</a>
     </div>
     <nav class="flex gap-4 items-center">
       <a href="<?= APP_URL ?>/admin/registrations" class="text-indigo-600 hover:underline">Registrations</a>
@@ -169,6 +256,9 @@ layout_head('Admin – Assign Groups');
 
   <?php if ($saved): ?>
   <div class="card border-green-200 bg-green-50 text-green-800 mb-6">Assignments saved.</div>
+  <?php endif; ?>
+  <?php if ($auto_assigned): ?>
+  <div class="card border-green-200 bg-green-50 text-green-800 mb-6">Children auto-assigned to groups by grade.</div>
   <?php endif; ?>
   <?php if (!empty($errors)): ?>
   <ul class="list-disc list-inside text-red-600 text-sm mb-6">
@@ -204,7 +294,7 @@ layout_head('Admin – Assign Groups');
   </div>
 
   <form id="assign-form" method="post" action="" class="space-y-6">
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start h-[400px]">
       <!-- Left: Children (Unassigned) -->
       <div class="card">
         <h2 class="text-lg font-semibold text-gray-900 mb-2">Unassigned</h2>
@@ -332,6 +422,18 @@ layout_head('Admin – Assign Groups');
       postAction('remove_group', { group_id: this.getAttribute('data-group-id') });
     });
   });
+
+  var autoAssignBtn = document.getElementById('auto-assign-btn');
+  if (autoAssignBtn) {
+    autoAssignBtn.addEventListener('click', function() {
+      var hasAssignments = this.getAttribute('data-has-assignments') === '1';
+      var msg = hasAssignments
+        ? 'Some children are already assigned to groups. Auto-assign will replace these assignments and assign by grade (one grade per group). Continue?'
+        : 'Assign all children to groups by grade (one grade per group)?';
+      if (!confirm(msg)) return;
+      postAction('auto_assign');
+    });
+  }
 
   function applyFilter() {
     var nameQ = (document.getElementById('filter-name') && document.getElementById('filter-name').value) ? document.getElementById('filter-name').value.trim().toLowerCase() : '';
