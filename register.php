@@ -651,12 +651,6 @@ $card_img = rtrim(parse_url(APP_URL, PHP_URL_PATH) ?: '', '/') . '/img/email_her
             <input type="text" id="address" name="address"<?= req('address') ?> value="<?= htmlspecialchars($form['address']) ?>"
               class="input-field">
           </div>
-          <div class="mt-4">
-            <label for="home_church" class="block text-sm font-medium text-gray-700 mb-1">Which church do you attend? (leave blank if none)<span
-                class="text-gray-500 font-normal"></span></label>
-            <input type="text" id="home_church" name="home_church" value="<?= htmlspecialchars($form['home_church']) ?>"
-              class="input-field" maxlength="255">
-          </div>
           <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label for="alternative_pickup_name" class="block text-sm font-medium text-gray-700 mb-1">Alternative pick-up name</label>
@@ -667,25 +661,6 @@ $card_img = rtrim(parse_url(APP_URL, PHP_URL_PATH) ?: '', '/') . '/img/email_her
               <label for="alternative_pickup_phone" id="alternative_pickup_phone_label" class="block text-sm font-medium text-gray-700 mb-1">Alternative pick-up phone</label>
               <input type="tel" id="alternative_pickup_phone" name="alternative_pickup_phone"
                 value="<?= htmlspecialchars($form['alternative_pickup_phone']) ?>" class="input-field" maxlength="50">
-            </div>
-          </div>
-          <div class="mt-4 pt-4 border-t border-gray-100">
-            <label for="hear_from_us_select" class="block text-sm font-medium text-gray-700 mb-1">How did you hear about
-              us?<?= req_star('hear_from_us') ?></label>
-            <select name="hear_from_us" id="hear_from_us_select" class="input-field max-w-sm text-sm"<?= req('hear_from_us') ?>
-              onchange="(function(sel){var wrap=document.getElementById('hear_from_us_other_wrap'),inp=document.getElementById('hear_from_us_other'),isOther=sel.value==='Other';wrap.classList.toggle('hidden',!isOther);inp.required=isOther;if(!isOther)inp.setCustomValidity('');})(this)">
-              <option value="">— Select an option —</option>
-              <?php foreach (['Previous VBS', 'Google search', 'Facebook/Instagram/Social Media', 'Friend or family referral','Flyers', 'Other'] as $opt): ?>
-                <option value="<?= htmlspecialchars($opt) ?>" <?= $hear_from_us_value === $opt ? 'selected' : '' ?>>
-                  <?= htmlspecialchars($opt) ?>
-                </option>
-              <?php endforeach; ?>
-            </select>
-            <div id="hear_from_us_other_wrap" class="mt-2 <?= $hear_from_us_value === 'Other' ? '' : 'hidden' ?>">
-              <input type="text" id="hear_from_us_other" name="hear_from_us_other"
-                value="<?= htmlspecialchars($hear_from_us_other_value) ?>" class="input-field max-w-sm text-sm"
-                placeholder="Please specify…"
-                <?= $hear_from_us_value === 'Other' ? 'required' : '' ?>>
             </div>
           </div>
         </div>
@@ -707,6 +682,39 @@ $card_img = rtrim(parse_url(APP_URL, PHP_URL_PATH) ?: '', '/') . '/img/email_her
                 class="block text-sm font-medium text-gray-700 mb-1">Relationship to the child(ren)<?= req_star('emergency_contact_relationship') ?></label>
               <input type="text" id="emergency_contact_relationship" name="emergency_contact_relationship" maxlength="50"<?= req('emergency_contact_relationship') ?>
                 value="<?= htmlspecialchars($form['emergency_contact_relationship']) ?>" class="input-field">
+            </div>
+          </div>
+        </div>
+        <div class="card mb-6">
+          <h3 class="text-lg font-semibold text-gray-900 mb-4">Tell us a little bit more about yourself</h3>
+          <div class="mb-4">
+            <label for="home_church" class="block text-sm font-medium text-gray-700 mb-1">Which church do you attend? (leave blank if none)<span
+                class="text-gray-500 font-normal"></span></label>
+            <input type="text" id="home_church" name="home_church" value="<?= htmlspecialchars($form['home_church']) ?>"
+              class="input-field" maxlength="255">
+            <div class="flex items-center gap-2 mt-2">
+              <input type="checkbox" id="crosspoint_attendee" class="rounded border-gray-300 text-indigo-600"
+                onchange="(function(cb){var inp=document.getElementById('home_church');if(cb.checked){inp.value='Crosspoint Church';}else{inp.value='';}})(this)">
+              <label for="crosspoint_attendee" class="text-sm text-gray-700 flex items-center gap-1.5">I am currently attending <img src="<?= rtrim(defined('APP_URL') ? APP_URL : '', '/') ?>/img/Xpt-ID2015_color_round-1.png" alt="Crosspoint" class="h-5 w-5 object-contain inline-block"> Crosspoint Church</label>
+            </div>
+          </div>
+          <div class="pt-4 border-t border-gray-100">
+            <label for="hear_from_us_select" class="block text-sm font-medium text-gray-700 mb-1">How did you hear about
+              us?<?= req_star('hear_from_us') ?></label>
+            <select name="hear_from_us" id="hear_from_us_select" class="input-field max-w-sm text-sm"<?= req('hear_from_us') ?>
+              onchange="(function(sel){var wrap=document.getElementById('hear_from_us_other_wrap'),inp=document.getElementById('hear_from_us_other'),isOther=sel.value==='Other';wrap.classList.toggle('hidden',!isOther);inp.required=isOther;if(!isOther)inp.setCustomValidity('');})(this)">
+              <option value="">— Select an option —</option>
+              <?php foreach (['Previous VBS', 'Google search', 'Facebook/Instagram/Social Media', 'Friend or family referral','Flyers', 'Other'] as $opt): ?>
+                <option value="<?= htmlspecialchars($opt) ?>" <?= $hear_from_us_value === $opt ? 'selected' : '' ?>>
+                  <?= htmlspecialchars($opt) ?>
+                </option>
+              <?php endforeach; ?>
+            </select>
+            <div id="hear_from_us_other_wrap" class="mt-2 <?= $hear_from_us_value === 'Other' ? '' : 'hidden' ?>">
+              <input type="text" id="hear_from_us_other" name="hear_from_us_other"
+                value="<?= htmlspecialchars($hear_from_us_other_value) ?>" class="input-field max-w-sm text-sm"
+                placeholder="Please specify…"
+                <?= $hear_from_us_value === 'Other' ? 'required' : '' ?>>
             </div>
           </div>
         </div>
@@ -1229,6 +1237,13 @@ $card_img = rtrim(parse_url(APP_URL, PHP_URL_PATH) ?: '', '/') . '/img/email_her
     container.addEventListener('click', function (e) {
       if (e.target.classList.contains('remove-kid')) removeKid(e.target.closest('.kid-block'));
     });
+
+    // Crosspoint attendee checkbox: sync with home_church on load
+    (function () {
+      var cb = document.getElementById('crosspoint_attendee');
+      var inp = document.getElementById('home_church');
+      if (cb && inp) cb.checked = (inp.value.trim() === 'Crosspoint Church');
+    })();
 
     // Photo consent (Section 5): only one of Yes/No may be checked
     form.querySelectorAll('.photo-consent-cb').forEach(function (cb) {
