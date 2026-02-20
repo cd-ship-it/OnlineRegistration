@@ -2,42 +2,504 @@
 session_start();
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/includes/db.php';
+require_once __DIR__ . '/includes/price.php';
 require_once __DIR__ . '/includes/layout.php';
+require_once __DIR__ . '/includes/db_helper.php';
 require_once __DIR__ . '/includes/logger.php';
-require_once __DIR__ . '/includes/auth.php'; // For csrf helper
-require_once __DIR__ . '/includes/RegistrationController.php';
+require_once __DIR__ . '/vendor/autoload.php';
 
-// Instantiate Controller
-$controller = new RegistrationController($pdo);
-$controller->handleRequest();
+$errors = [];
+$payment_error = null;
+$registration_open = get_setting($pdo, 'registration_open', '1');
+app_log('high', 'Registration', 'Page loaded', [
+  'method' => $_SERVER['REQUEST_METHOD'],
+  'registration_open' => $registration_open,
+  'ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown',
+]);
+$max_kids = (int) get_setting($pdo, 'max_kids_per_registration', 10);
+$event_title = get_setting($pdo, 'event_title', '');
+$event_start_date = get_setting($pdo, 'event_start_date', '');
+$event_end_date = get_setting($pdo, 'event_end_date', '');
+$event_start_time = get_setting($pdo, 'event_start_time', '');
+$event_end_time = get_setting($pdo, 'event_end_time', '');
+$event_description = get_setting($pdo, 'event_description', '');
 
-// Extract variables for View from Controller state
-$form = $controller->form;
-$kids_for_form = $controller->kids;
-$errors = $controller->getErrors();
-$payment_error = $controller->getPaymentError();
-$initial_step = $controller->initialStep;
-
-// Settings for View
-$service = $controller->getService();
-$registration_open = $service->getSetting('registration_open', '1');
-$max_kids = (int) $service->getSetting('max_kids_per_registration', 10);
-$event_title = $service->getSetting('event_title', '');
-$event_description = $service->getSetting('event_description', '');
-
-// Helpers for View
-function req($field) {
-    // simplified for brevity in this view, consistent with controller validation
-    return ''; // browserside validation optional given server side checks
+// Format event date/time range for display, e.g. "Monday, Jun 15 to Friday, Jun 19 from 9 am to 12:30 pm"
+$event_date_range = '';
+if ($event_start_date || $event_end_date) {
+  $fmt_date = function (string $date): string {
+    $ts = strtotime($date);
+    return $ts ? date('l, M j', $ts) : $date;
+  };
+  $fmt_time = function (string $time): string {
+    $ts = strtotime($time);
+    return $ts ? ltrim(date('g:i a', $ts), '0') : $time;
+  };
+  // Remove ":00" for whole hours, e.g. "9:00 am" → "9 am"
+  $clean_time = function (string $t): string {
+    return preg_replace('/:00\s/', ' ', $t);
+  };
+  $parts = [];
+  if ($event_start_date) {
+    $parts[] = $fmt_date($event_start_date);
+  }
+  if ($event_end_date) {
+    $parts[] = 'to ' . $fmt_date($event_end_date);
+  }
+  $date_str = implode(' ', $parts);
+  $time_parts = [];
+  if ($event_start_time) {
+    $time_parts[] = $clean_time($fmt_time($event_start_time));
+  }
+  if ($event_end_time) {
+    $time_parts[] = $clean_time($fmt_time($event_end_time));
+  }
+  $event_date_range = $date_str;
+  if ($time_parts) {
+    $event_date_range .= ' from ' . implode(' to ', $time_parts);
+  }
 }
-function req_star($field) { return ' *'; }
 
-// --- VIEW START ---
+// Last grade completed options (dropdown) — change this array to update the list
+$grade_options = ['Preschool', 'Pre K', 'K', '1st', '2nd', '3rd', '4th', '5th'];
+
+// T-shirt size options (dropdown) for each kid — change this array to update the list
+$t_shirt_size_options = ['Youth XS', 'Youth S', 'Youth M', 'Youth L', 'Youth XL'];
+
+// ─── Required fields ──────────────────────────────────────────────────────────
+// Remove a key to make a field optional; add one to enforce it.
+// Child fields use the prefix "kid_".
+$required_fields = [
+    // Step 1 – Parent / Guardian
+    'parent_first_name',
+    'parent_last_name',
+    'email',
+    'phone',
+    'address',
+    'hear_from_us',
+    // Step 1 – Emergency contact
+    'emergency_contact_name',
+    'emergency_contact_phone',
+    'emergency_contact_relationship',
+    // Step 2 – Per child (prefix kid_)
+    'kid_first_name',
+    'kid_last_name',
+    'kid_date_of_birth',
+    'kid_gender',
+    'kid_last_grade_completed',
+    'kid_t_shirt_size',
+    // Step 3 – Consent
+    'digital_signature',
+    'photo_consent',
+];
+
+/** Returns ' required' if $field is in $required_fields, else ''. Use inside HTML input/select. */
+function req(string $field): string {
+    global $required_fields;
+    return in_array($field, $required_fields, true) ? ' required' : '';
+}
+
+/** Returns ' *' if $field is in $required_fields, else ''. Append to label text. */
+function req_star(string $field): string {
+    global $required_fields;
+    return in_array($field, $required_fields, true) ? ' *' : '';
+}
+
+// Load consent items for step 3 from admin settings (each paragraph = one consent item)
+$content = get_setting($pdo, 'consent_content', '');
+$content = str_replace(["\r\n", "\r"], ["\n", "\n"], $content);
+$consent_paragraphs = array_filter(array_map('trim', preg_split('/\n\s*\n+/', $content)));
+if (empty($consent_paragraphs)) {
+  $consent_paragraphs = ['Consent terms have not been configured yet. Please contact the administrator.'];
+}
+
+// Price / early bird for display above form
+$today = date('Y-m-d');
+$early_bird_end = get_setting($pdo, 'early_bird_end_date', '');
+$early_bird_price_cents = (int) get_setting($pdo, 'early_bird_price_per_kid_cents', 0);
+$regular_price_cents = (int) get_setting($pdo, 'price_per_kid_cents', 0);
+$show_early_bird = ($early_bird_end !== '' && $early_bird_price_cents > 0 && $today <= $early_bird_end);
+$early_bird_end_display = $early_bird_end ? date('M j, Y', strtotime($early_bird_end)) : '';
+
+// Default form state
+$form = [
+  'parent_first_name' => '',
+  'parent_last_name' => '',
+  'email' => '',
+  'phone' => '',
+  'address' => '',
+  'home_church' => '',
+  'alternative_pickup_name' => '',
+  'alternative_pickup_phone' => '',
+  'emergency_contact_name' => '',
+  'emergency_contact_phone' => '',
+  'emergency_contact_relationship' => '',
+];
+$kids_for_form = [['first_name' => '', 'last_name' => '', 'age' => '', 'gender' => '', 'date_of_birth' => '', 'last_grade_completed' => '', 't_shirt_size' => '', 'medical_allergy_info' => '']];
+$initial_step = 1;
+$digital_signature_value = '';
+$photo_consent_value = '';
+$receive_emails_value = 'yes'; // checked by default
+$hear_from_us_value = '';
+$hear_from_us_other_value = '';
+$consent_checked = []; // keys: section_0, section_1, … — restored from session on cancel-return
+
+// Restore form from session when user returns after cancelling payment
+$existing_draft_id = null;
+if ($_SERVER['REQUEST_METHOD'] !== 'POST' && !empty($_GET['cancelled']) && !empty($_SESSION['vbs_registration_data'])) {
+  $saved = $_SESSION['vbs_registration_data'];
+  $existing_draft_id = isset($saved['registration_id']) ? (int) $saved['registration_id'] : null;
+  $form = [
+    'parent_first_name' => $saved['parent_first_name'] ?? '',
+    'parent_last_name' => $saved['parent_last_name'] ?? '',
+    'email' => $saved['email'] ?? '',
+    'phone' => $saved['phone'] ?? '',
+    'address' => $saved['address'] ?? '',
+    'home_church' => $saved['home_church'] ?? '',
+    'alternative_pickup_name' => $saved['alternative_pickup_name'] ?? '',
+    'alternative_pickup_phone' => $saved['alternative_pickup_phone'] ?? '',
+    'emergency_contact_name' => $saved['emergency_contact_name'] ?? '',
+    'emergency_contact_phone' => $saved['emergency_contact_phone'] ?? '',
+    'emergency_contact_relationship' => $saved['emergency_contact_relationship'] ?? '',
+  ];
+  $kids_for_form = [];
+  foreach ($saved['kid_rows'] ?? [] as $k) {
+    $kids_for_form[] = [
+      'first_name' => $k['first_name'] ?? '',
+      'last_name' => $k['last_name'] ?? '',
+      'age' => $k['age'] ?? '',
+      'gender' => $k['gender'] ?? '',
+      'date_of_birth' => $k['date_of_birth'] ?? '',
+      'last_grade_completed' => $k['last_grade_completed'] ?? '',
+      't_shirt_size' => $k['t_shirt_size'] ?? '',
+      'medical_allergy_info' => $k['medical_allergy_info'] ?? '',
+    ];
+  }
+  if (empty($kids_for_form))
+    $kids_for_form = [['first_name' => '', 'last_name' => '', 'age' => '', 'gender' => '', 'date_of_birth' => '', 'last_grade_completed' => '', 't_shirt_size' => '', 'medical_allergy_info' => '']];
+  $digital_signature_value = ''; // intentionally cleared — user must re-sign
+  $photo_consent_value = $saved['photo_consent'] ?? '';
+  $receive_emails_value = $saved['receive_emails'] ?? 'yes';
+  $hear_from_us_value = $saved['hear_from_us'] ?? '';
+  $hear_from_us_other_value = $saved['hear_from_us_other'] ?? '';
+  $consent_checked = $saved['consent_items'] ?? [];
+  $initial_step = 4;
+}
+
+// Single submission: all data in one POST with action=payment
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'payment') {
+  app_log('high', 'Registration', 'Form submission received', [
+    'ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown',
+    'email' => trim($_POST['email'] ?? ''),
+  ]);
+  $parent_first = trim($_POST['parent_first_name'] ?? '');
+  $parent_last = trim($_POST['parent_last_name'] ?? '');
+  $email = trim($_POST['email'] ?? '');
+  $phone = trim($_POST['phone'] ?? '');
+  $address = trim($_POST['address'] ?? '');
+  $home_church = trim($_POST['home_church'] ?? '');
+  $alternative_pickup_name = trim($_POST['alternative_pickup_name'] ?? '') ?: null;
+  $alternative_pickup_phone = trim($_POST['alternative_pickup_phone'] ?? '') ?: null;
+  $emergency_contact_name = trim($_POST['emergency_contact_name'] ?? '') ?: null;
+  $emergency_contact_phone = trim($_POST['emergency_contact_phone'] ?? '') ?: null;
+  $emergency_contact_relationship = trim($_POST['emergency_contact_relationship'] ?? '') ?: null;
+  $digital_signature = trim($_POST['digital_signature'] ?? '');
+  $kids = $_POST['kids'] ?? [];
+
+  // Validate parent
+  if (in_array('parent_first_name', $required_fields, true) && $parent_first === '')
+    $errors[] = 'Parent first name is required.';
+  if (in_array('parent_last_name', $required_fields, true) && $parent_last === '')
+    $errors[] = 'Parent last name is required.';
+  if ($email === '')
+    $errors[] = 'Email is required.';
+  elseif (!filter_var($email, FILTER_VALIDATE_EMAIL))
+    $errors[] = 'Please enter a valid email.';
+  if (in_array('phone', $required_fields, true) && $phone === '')
+    $errors[] = 'Phone number is required.';
+  if (in_array('address', $required_fields, true) && $address === '')
+    $errors[] = 'Address is required.';
+  if ($alternative_pickup_name !== null && $alternative_pickup_name !== '' && empty($alternative_pickup_phone))
+    $errors[] = 'Alternative pick-up phone is required when an alternative pick-up name is provided.';
+  if (in_array('emergency_contact_name', $required_fields, true) && trim($_POST['emergency_contact_name'] ?? '') === '')
+    $errors[] = 'Emergency contact name is required.';
+  if (in_array('emergency_contact_phone', $required_fields, true) && trim($_POST['emergency_contact_phone'] ?? '') === '')
+    $errors[] = 'Emergency contact phone is required.';
+  if (in_array('emergency_contact_relationship', $required_fields, true) && trim($_POST['emergency_contact_relationship'] ?? '') === '')
+    $errors[] = 'Emergency contact relationship is required.';
+
+  // Build kid_rows and validate kids
+  $kid_rows = [];
+  foreach ($kids as $i => $k) {
+    $first = trim($k['first_name'] ?? '');
+    $last = trim($k['last_name'] ?? '');
+    $age = isset($k['age']) && $k['age'] !== '' ? (int) $k['age'] : null;
+    $gender = trim($k['gender'] ?? '');
+    if (!in_array($gender, ['Boy', 'Girl'], true))
+      $gender = null;
+    $dob = trim($k['date_of_birth'] ?? '');
+    $dob = $dob !== '' ? $dob : null;
+    $last_grade = trim($k['last_grade_completed'] ?? '') ?: null;
+    $t_shirt = trim($k['t_shirt_size'] ?? '') ?: null;
+    $medical = trim($k['medical_allergy_info'] ?? '');
+    if ($first !== '' || $last !== '' || $age !== null || $gender !== null || $medical !== '') {
+      $kid_rows[] = [
+        'first_name' => $first,
+        'last_name' => $last,
+        'age' => $age ?: null,
+        'gender' => $gender ?: null,
+        'date_of_birth' => $dob,
+        'last_grade_completed' => $last_grade,
+        't_shirt_size' => $t_shirt,
+        'medical_allergy_info' => $medical
+      ];
+    }
+  }
+  if (count($kid_rows) === 0)
+    $errors[] = 'Please add at least one child.';
+  foreach ($kid_rows as $i => $k) {
+    $n = $i + 1;
+    if (in_array('kid_first_name', $required_fields, true) && $k['first_name'] === '')
+      $errors[] = "Kid $n: first name is required.";
+    if (in_array('kid_last_name', $required_fields, true) && $k['last_name'] === '')
+      $errors[] = "Kid $n: last name is required.";
+    if (in_array('kid_date_of_birth', $required_fields, true) && empty($k['date_of_birth']))
+      $errors[] = "Kid $n: date of birth is required.";
+    if (in_array('kid_gender', $required_fields, true) && empty($k['gender']))
+      $errors[] = "Kid $n: gender is required.";
+    if (in_array('kid_last_grade_completed', $required_fields, true) && empty($k['last_grade_completed']))
+      $errors[] = "Kid $n: grade entering in Fall 2026 is required.";
+    if (in_array('kid_t_shirt_size', $required_fields, true) && empty($k['t_shirt_size']))
+      $errors[] = "Kid $n: T-shirt size is required.";
+  }
+  if (count($kid_rows) > $max_kids)
+    $errors[] = "Maximum $max_kids children per registration.";
+  if (in_array('digital_signature', $required_fields, true) && $digital_signature === '')
+    $errors[] = 'Digital signature (your full name) is required.';
+  $photo_consent_yes = !empty($_POST['photo_consent_yes']);
+  $photo_consent_no = !empty($_POST['photo_consent_no']);
+  $photo_consent = '';
+  if ($photo_consent_yes && $photo_consent_no) {
+    $errors[] = 'Please select only Yes or No for photo consent (Section 5), not both.';
+  } elseif (!$photo_consent_yes && !$photo_consent_no) {
+    $errors[] = 'Please select Yes or No for the photo consent (Section 5).';
+  } else {
+    $photo_consent = $photo_consent_yes ? 'yes' : 'no';
+  }
+
+  // Section 6: Future Communications
+  $receive_emails = !empty($_POST['receive_emails']) ? 'yes' : 'no';
+
+  // Section 7: How did you hear from us
+  $hear_from_us_select = trim($_POST['hear_from_us'] ?? '');
+  $hear_from_us_other_txt = trim($_POST['hear_from_us_other'] ?? '');
+  $hear_from_us_db = ($hear_from_us_select === 'Other' && $hear_from_us_other_txt !== '')
+    ? 'Other: ' . $hear_from_us_other_txt
+    : $hear_from_us_select;
+  if (in_array('hear_from_us', $required_fields, true) && $hear_from_us_select === '')
+    $errors[] = 'Please tell us how you heard about us.';
+  elseif (in_array('hear_from_us', $required_fields, true) && $hear_from_us_select === 'Other' && $hear_from_us_other_txt === '')
+    $errors[] = 'Please specify how you heard about us.';
+
+  if (empty($errors)) {
+    $total_dollars = compute_total_dollars($pdo, count($kid_rows));
+    if ($total_dollars < 0.50)
+      $errors[] = 'Minimum charge is $0.50. Please check admin pricing settings.';
+  }
+
+  if (!empty($errors)) {
+    app_log('high', 'Registration', 'Validation failed', [
+      'email' => $email,
+      'errors' => $errors,
+    ]);
+    $form = [
+      'parent_first_name' => $parent_first,
+      'parent_last_name' => $parent_last,
+      'email' => $email,
+      'phone' => $phone,
+      'address' => $address,
+      'home_church' => $home_church,
+      'alternative_pickup_name' => $alternative_pickup_name ?: '',
+      'alternative_pickup_phone' => $alternative_pickup_phone ?: '',
+      'emergency_contact_name' => $emergency_contact_name ?: '',
+      'emergency_contact_phone' => $emergency_contact_phone ?: '',
+      'emergency_contact_relationship' => $emergency_contact_relationship ?: '',
+    ];
+    $kids_for_form = [];
+    foreach ($kids as $k) {
+      $kids_for_form[] = [
+        'first_name' => trim($k['first_name'] ?? ''),
+        'last_name' => trim($k['last_name'] ?? ''),
+        'age' => isset($k['age']) && $k['age'] !== '' ? (int) $k['age'] : '',
+        'gender' => trim($k['gender'] ?? ''),
+        'date_of_birth' => trim($k['date_of_birth'] ?? ''),
+        'last_grade_completed' => trim($k['last_grade_completed'] ?? ''),
+        't_shirt_size' => trim($k['t_shirt_size'] ?? ''),
+        'medical_allergy_info' => trim($k['medical_allergy_info'] ?? ''),
+      ];
+    }
+    if (empty($kids_for_form))
+      $kids_for_form = [['first_name' => '', 'last_name' => '', 'age' => '', 'gender' => '', 'date_of_birth' => '', 'last_grade_completed' => '', 't_shirt_size' => '', 'medical_allergy_info' => '']];
+    $digital_signature_value = $digital_signature;
+    $photo_consent_value = $photo_consent;
+    $receive_emails_value = $receive_emails;
+    $hear_from_us_value = $hear_from_us_select;
+    $hear_from_us_other_value = $hear_from_us_other_txt;
+    if (!empty($errors)) {
+      if (preg_match('/Parent|Email|email/i', implode(' ', $errors)))
+        $initial_step = 1;
+      elseif (preg_match('/Kid|child|Maximum|Minimum/i', implode(' ', $errors)))
+        $initial_step = 2;
+      else
+        $initial_step = 4;
+    }
+  } else {
+    try {
+      if (!STRIPE_SECRET_KEY)
+        throw new Exception('Stripe is not configured.');
+      app_log('high', 'Registration', 'Validation passed, proceeding to save draft', [
+        'email' => $email,
+        'kid_count' => count($kid_rows),
+      ]);
+      $photo_consent_val = ($photo_consent === 'yes' || $photo_consent === 'no') ? $photo_consent : null;
+      $now = date('Y-m-d H:i:s'); // Los Angeles (set in config.php)
+      $wanted = [
+        'parent_first_name' => $parent_first,
+        'parent_last_name' => $parent_last,
+        'email' => $email,
+        'phone' => $phone,
+        'address' => $address ?: null,
+        'home_church' => $home_church ?: null,
+        'alternative_pickup_name' => $alternative_pickup_name,
+        'alternative_pickup_phone' => $alternative_pickup_phone,
+        'emergency_contact_name' => $emergency_contact_name,
+        'emergency_contact_phone' => $emergency_contact_phone,
+        'emergency_contact_relationship' => $emergency_contact_relationship,
+        'consent_accepted' => 1,
+        'digital_signature' => $digital_signature ?: null,
+        'consent_agreed_at' => $now,
+        'photo_consent' => $photo_consent_val,
+        'receive_emails' => $receive_emails,
+        'hear_from_us' => $hear_from_us_db ?: null,
+        'status' => 'draft',
+        'total_amount_cents' => (int) round($total_dollars * 100),
+        'created_at' => $now,
+        'updated_at' => $now,
+      ];
+      $registration_id = reg_save_draft($pdo, $existing_draft_id, $wanted, $kid_rows);
+      app_log('high', 'Stripe', 'Initiating Stripe checkout session', [
+        'registration_id' => $registration_id,
+        'email' => $email,
+        'kid_count' => count($kid_rows),
+        'total_cents' => (int) round($total_dollars * 100),
+      ]);
+      \Stripe\Stripe::setApiKey(STRIPE_SECRET_KEY);
+      $session = \Stripe\Checkout\Session::create([
+        'payment_method_types' => ['card'],
+        'customer_email' => $email,
+        'line_items' => [
+          [
+            'price_data' => [
+              'currency' => get_setting($pdo, 'currency', 'usd'),
+              'product_data' => ['name' => 'VBS Registration - ' . count($kid_rows) . ' kid(s)'],
+              'unit_amount' => (int) round($total_dollars * 100 / count($kid_rows)),
+            ],
+            'quantity' => count($kid_rows),
+          ]
+        ],
+        'mode' => 'payment',
+        'success_url' => APP_URL . '/success?session_id={CHECKOUT_SESSION_ID}',
+        'cancel_url' => APP_URL . '/register?cancelled=1',
+        'metadata' => ['registration_id' => (string) $registration_id],
+      ]);
+      if (empty($session->url))
+        throw new Exception('Stripe did not return a checkout URL.');
+      app_log('high', 'Stripe', 'Checkout session created, redirecting', [
+        'registration_id' => $registration_id,
+        'stripe_session' => $session->id,
+      ]);
+      // Save form data to session so if user cancels payment they get it back
+      // Also save registration_id so we can update the draft instead of creating duplicates
+      $_SESSION['vbs_registration_data'] = [
+        'registration_id' => $registration_id,
+        'parent_first_name' => $parent_first,
+        'parent_last_name' => $parent_last,
+        'email' => $email,
+        'phone' => $phone,
+        'address' => $address,
+        'home_church' => $home_church,
+        'alternative_pickup_name' => $alternative_pickup_name,
+        'alternative_pickup_phone' => $alternative_pickup_phone,
+        'emergency_contact_name' => $emergency_contact_name,
+        'emergency_contact_phone' => $emergency_contact_phone,
+        'emergency_contact_relationship' => $emergency_contact_relationship,
+        'kid_rows' => $kid_rows,
+        'digital_signature' => $digital_signature,
+        'photo_consent' => ($photo_consent === 'yes' || $photo_consent === 'no') ? $photo_consent : null,
+        'receive_emails' => $receive_emails,
+        'hear_from_us' => $hear_from_us_select,
+        'hear_from_us_other' => $hear_from_us_other_txt,
+        'consent_items' => array_map(fn($v) => (string)$v, (array)($_POST['consent_items'] ?? [])),
+      ];
+      header('Location: ' . $session->url, true, 303);
+      exit;
+    } catch (Exception $e) {
+      $payment_error = $e->getMessage();
+      app_log('high', 'Error', 'Payment flow exception', [
+        'error' => $e->getMessage(),
+        'email' => $email ?? null,
+        'registration_id' => $registration_id ?? null,
+        'file' => $e->getFile(),
+        'line' => $e->getLine(),
+      ]);
+      $form = [
+        'parent_first_name' => $parent_first,
+        'parent_last_name' => $parent_last,
+        'email' => $email,
+        'phone' => $phone,
+        'address' => $address,
+        'home_church' => $home_church,
+        'alternative_pickup_name' => $alternative_pickup_name ?: '',
+        'alternative_pickup_phone' => $alternative_pickup_phone ?: '',
+        'emergency_contact_name' => $emergency_contact_name ?: '',
+        'emergency_contact_phone' => $emergency_contact_phone ?: '',
+        'emergency_contact_relationship' => $emergency_contact_relationship ?: '',
+      ];
+      $kids_for_form = [];
+      foreach ($kids as $k) {
+        $kids_for_form[] = [
+          'first_name' => trim($k['first_name'] ?? ''),
+          'last_name' => trim($k['last_name'] ?? ''),
+          'age' => isset($k['age']) && $k['age'] !== '' ? (int) $k['age'] : '',
+          'gender' => trim($k['gender'] ?? ''),
+          'date_of_birth' => trim($k['date_of_birth'] ?? ''),
+          'last_grade_completed' => trim($k['last_grade_completed'] ?? ''),
+          't_shirt_size' => trim($k['t_shirt_size'] ?? ''),
+          'medical_allergy_info' => trim($k['medical_allergy_info'] ?? ''),
+        ];
+      }
+      if (empty($kids_for_form))
+        $kids_for_form = [['first_name' => '', 'last_name' => '', 'age' => '', 'gender' => '', 'date_of_birth' => '', 'last_grade_completed' => '', 't_shirt_size' => '', 'medical_allergy_info' => '']];
+      $digital_signature_value = $digital_signature;
+      $photo_consent_value = $photo_consent;
+      $receive_emails_value = $receive_emails;
+      $hear_from_us_value = $hear_from_us_select;
+      $hear_from_us_other_value = $hear_from_us_other_txt;
+      $initial_step = 4;
+    }
+  }
+}
+
+$kid_names_str = implode(', ', array_map(function ($k) {
+  return trim(($k['first_name'] ?? '') . ' ' . ($k['last_name'] ?? ''));
+}, $kids_for_form));
+
 layout_head('VBS Registration');
 $card_img = rtrim(parse_url(APP_URL, PHP_URL_PATH) ?: '', '/') . '/img/email_hero.webp';
 ?>
 <!-- Full-width event header: spans page, inline styles for reliable padding -->
 <section style="display:grid; grid-template-columns:1fr 1fr; background:#fff; border-bottom:1px solid #e5e7eb;">
+
   <!-- Left: photo -->
   <div style="overflow:hidden;">
     <img src="<?= htmlspecialchars($card_img) ?>" alt="VBS event photo"
@@ -46,10 +508,59 @@ $card_img = rtrim(parse_url(APP_URL, PHP_URL_PATH) ?: '', '/') . '/img/email_her
 
   <!-- Right: event details + pricing + CTA -->
   <div style="padding:2rem; display:flex; flex-direction:column; justify-content:space-between; gap:1rem;">
+    <div style="display:flex; flex-direction:column; gap:0.75rem;">
+
       <h1 style="font-size:1.25rem; font-weight:700; color:#111827; line-height:1.3; margin:0;">
         <?= htmlspecialchars($event_title) ?> Registration
       </h1>
-      <!-- (Shortened Header for Refactor Demo - Keeping original structure is fine) -->
+
+      <p style="display:flex; align-items:flex-start; gap:0.5rem; font-size:0.875rem; color:#4b5563; margin:0;">
+        <svg style="width:1rem; height:1rem; flex-shrink:0; margin-top:2px;" fill="none" stroke="#6366f1" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
+        <a href="https://www.google.com/maps/search/?api=1&amp;query=658+Gibraltar+Court,+Milpitas,+CA+95035"
+           target="_blank" rel="noopener noreferrer"
+           style="color:#4f46e5; text-decoration:none;"
+           onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">
+          658 Gibraltar Court, Milpitas, CA 95035
+        </a>
+      </p>
+
+      <?php if ($event_date_range): ?>
+      <p style="display:flex; align-items:flex-start; gap:0.5rem; font-size:0.875rem; color:#4b5563; margin:0;">
+        <svg style="width:1rem; height:1rem; flex-shrink:0; margin-top:2px;" fill="none" stroke="#6366f1" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        </svg>
+        <?= htmlspecialchars($event_date_range) ?>
+      </p>
+      <?php endif; ?>
+
+      <?php if ($show_early_bird): ?>
+      <div style="border-radius:0.5rem; background:#fffbeb; border:1px solid #fcd34d; padding:0.625rem 0.875rem;">
+        <p style="font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:#92400e; margin:0 0 0.25rem;">Early bird discount</p>
+        <p style="font-size:1rem; font-weight:700; color:#78350f; margin:0;">
+          <?= format_money($early_bird_price_cents / 100.0) ?>
+          <span style="font-size:0.875rem; font-weight:600;">per child</span>
+        </p>
+        <p style="font-size:0.75rem; color:#92400e; margin:0.125rem 0 0;">Ends <?= htmlspecialchars($early_bird_end_display) ?></p>
+      </div>
+      <?php endif; ?>
+
+      <div>
+        <p style="font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:#6b7280; margin:0 0 0.2rem;">
+          <?= $show_early_bird ? 'Regular price' : 'Registration price' ?>
+        </p>
+        <p style="font-size:1rem; font-weight:700; color:#111827; margin:0;">
+          <?= format_money($regular_price_cents / 100.0) ?>
+          <span style="font-size:0.875rem; font-weight:600; color:#4b5563;">per child</span>
+        </p>
+      </div>
+    </div>
+
+    <a href="#form-top" class="btn-emerald" style="display:block; text-align:center; font-size:0.875rem;">Register Now &#8594;</a>
   </div>
 </section>
 <div id="form-top"></div>
@@ -64,36 +575,20 @@ $card_img = rtrim(parse_url(APP_URL, PHP_URL_PATH) ?: '', '/') . '/img/email_her
       </ul>
     </div>
   <?php endif; ?>
-  
+  <?php if ($payment_error): ?>
+    <div class="card border-red-200 bg-red-50 mb-6 text-red-700 text-sm">We couldn’t start payment.
+      <?= htmlspecialchars($payment_error) ?></div>
+  <?php endif; ?>
+  <?php if (isset($_GET['cancelled'])): ?>
+    <div id="cancel-banner" class="card border-amber-200 bg-amber-50 mb-6 text-amber-800">Payment was cancelled. You can complete the form again when ready.</div>
+  <?php endif; ?>
+
   <?php if ($registration_open !== '1'): ?>
     <div class="card border-gray-200 bg-gray-100 text-gray-600 text-center">Registration is currently closed.</div>
   <?php else: ?>
 
     <form method="post" action="" id="registration-form" data-initial-step="<?= (int) $initial_step ?>">
       <input type="hidden" name="action" value="payment">
-      <?= csrf_input() ?>
-
-      <!-- Stepper and Fields here... (Keeping existing HTML structure, just binding values) -->
-      
-      <!-- Step 1 -->
-      <div id="step-1" class="registration-step step-panel">
-         <!-- Inputs bound to $form['...'] -->
-         <label>First Name</label>
-         <input type="text" name="parent_first_name" value="<?= htmlspecialchars($form['parent_first_name']) ?>" class="input-field">
-         <!-- ... Rest of form ... -->
-      </div>
-      
-      <!-- IMPORTANT: Because the original file was huge, I am NOT replacing the entire HTML block in this single tool call to avoid truncation errors. 
-           I will use a rewrite strategy or just focus on the Logic Block implementation first. 
-           
-           Wait - I must replace the WHOLE content if I use replace_file_content with full range. 
-           Since I am an agent, I should probably write the NEW file content fully instead of trying to patch a 1400 line file with regex. 
-      -->
-    </form>
-  <?php endif; ?>
-</div>
-<?php layout_footer(); ?>
-
 
      
 
@@ -209,7 +704,7 @@ $card_img = rtrim(parse_url(APP_URL, PHP_URL_PATH) ?: '', '/') . '/img/email_her
             </div>
             <div>
               <label for="emergency_contact_relationship"
-                class="block text-sm font-medium text-gray-700 mb-1">Relationship to the child(ren)<?= req_star('emergency_contact_relationship') ?></label>
+                class="block text-sm font-medium text-gray-700 mb-1">Relationship<?= req_star('emergency_contact_relationship') ?></label>
               <input type="text" id="emergency_contact_relationship" name="emergency_contact_relationship" maxlength="50"<?= req('emergency_contact_relationship') ?>
                 value="<?= htmlspecialchars($form['emergency_contact_relationship']) ?>" class="input-field">
             </div>
