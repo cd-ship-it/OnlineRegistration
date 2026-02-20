@@ -209,7 +209,7 @@ $card_img = rtrim(parse_url(APP_URL, PHP_URL_PATH) ?: '', '/') . '/img/email_her
             </div>
             <div>
               <label for="emergency_contact_relationship"
-                class="block text-sm font-medium text-gray-700 mb-1">Relationship<?= req_star('emergency_contact_relationship') ?></label>
+                class="block text-sm font-medium text-gray-700 mb-1">Relationship to the child(ren)<?= req_star('emergency_contact_relationship') ?></label>
               <input type="text" id="emergency_contact_relationship" name="emergency_contact_relationship" maxlength="50"<?= req('emergency_contact_relationship') ?>
                 value="<?= htmlspecialchars($form['emergency_contact_relationship']) ?>" class="input-field">
             </div>
