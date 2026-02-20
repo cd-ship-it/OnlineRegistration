@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS `registrations` (
   `photo_consent` varchar(10) DEFAULT NULL,
   `receive_emails` varchar(3) NOT NULL DEFAULT 'yes',
   `hear_from_us` varchar(255) DEFAULT NULL,
+  `signup_rating` tinyint unsigned DEFAULT NULL,
   `stripe_session_id` varchar(255) DEFAULT NULL,
   `status` varchar(20) NOT NULL DEFAULT 'draft',
   `confirmation_email_sent` tinyint(1) NOT NULL DEFAULT 0,

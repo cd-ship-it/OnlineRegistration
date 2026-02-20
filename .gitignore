@@ -14,3 +14,10 @@ vbs-email.html_back
 !tests/**
 Untitled
 register_v2.php
+.phpunit.cache/test-results
+includes/RegistrationController.php
+includes/RegistrationService.php
+.cursor/plans/add_allow_promotion_codes_to_stripe_checkout_37098a06.plan.md
+migrations/add_signup_rating.sql
+.phpunit.cache/test-results
+.phpunit.cache/test-results

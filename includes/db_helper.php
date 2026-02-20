@@ -53,14 +53,12 @@ function admin_get_registrations(
     $order_sql = str_replace('{dir}', $dir, $template);
 
     $db = db_prefix();
-    $q  = "SELECT r.*, (SELECT COUNT(*) FROM {$db}registration_kids k WHERE k.registration_id = r.id) AS kid_count
+    $q  = "SELECT r.*, (SELECT COUNT(*) FROM {$db}registration_kids k 
+                         JOIN {$db}registrations r2 ON r2.id = k.registration_id AND r2.status = 'paid'
+                         WHERE k.registration_id = r.id) AS kid_count
            FROM {$db}registrations r
-           WHERE 1=1";
+           WHERE r.status = 'paid'";
     $params = [];
-    if ($status_filter !== '') {
-        $q      .= ' AND r.status = ?';
-        $params[] = $status_filter;
-    }
     $q .= ' ORDER BY ' . $order_sql;
     $stmt = $pdo->prepare($q);
     $stmt->execute($params);
@@ -75,14 +73,9 @@ function admin_get_kids_list(PDO $pdo, string $status_filter): array
     $db = db_prefix();
     $q  = "SELECT k.*, r.parent_first_name, r.parent_last_name, r.status AS reg_status, g.name AS group_name
            FROM {$db}registration_kids k
-           JOIN {$db}registrations r ON r.id = k.registration_id
-           LEFT JOIN {$db}groups g ON g.id = k.group_id
-           WHERE 1=1";
+           JOIN {$db}registrations r ON r.id = k.registration_id AND r.status = 'paid'
+           LEFT JOIN {$db}groups g ON g.id = k.group_id";
     $params = [];
-    if ($status_filter !== '') {
-        $q      .= ' AND r.status = ?';
-        $params[] = $status_filter;
-    }
     $q .= ' ORDER BY k.last_name, k.first_name';
     $stmt = $pdo->prepare($q);
     $stmt->execute($params);
@@ -97,7 +90,7 @@ function admin_get_kids_list(PDO $pdo, string $status_filter): array
 function admin_get_registration(PDO $pdo, int $id): ?array
 {
     $db   = db_prefix();
-    $stmt = $pdo->prepare("SELECT * FROM {$db}registrations WHERE id = ?");
+    $stmt = $pdo->prepare("SELECT * FROM {$db}registrations WHERE id = ? AND status = 'paid'");
     $stmt->execute([$id]);
     return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
 }
@@ -108,7 +101,9 @@ function admin_get_registration(PDO $pdo, int $id): ?array
 function admin_get_registration_kids(PDO $pdo, int $id): array
 {
     $db   = db_prefix();
-    $stmt = $pdo->prepare("SELECT * FROM {$db}registration_kids WHERE registration_id = ? ORDER BY sort_order, id");
+    $stmt = $pdo->prepare("SELECT k.* FROM {$db}registration_kids k
+                            JOIN {$db}registrations r ON r.id = k.registration_id AND r.status = 'paid'
+                            WHERE k.registration_id = ? ORDER BY k.sort_order, k.id");
     $stmt->execute([$id]);
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
@@ -200,7 +195,10 @@ function groups_get_kid_counts(PDO $pdo, array $group_ids): array
     if (empty($group_ids)) return [];
     $db   = db_prefix();
     $in   = implode(',', array_map('intval', $group_ids));
-    $rows = $pdo->query("SELECT group_id, COUNT(*) AS cnt FROM {$db}registration_kids WHERE group_id IN ($in) GROUP BY group_id")
+    $rows = $pdo->query("SELECT k.group_id, COUNT(*) AS cnt 
+                         FROM {$db}registration_kids k
+                         JOIN {$db}registrations r ON r.id = k.registration_id AND r.status = 'paid'
+                         WHERE k.group_id IN ($in) GROUP BY k.group_id")
                 ->fetchAll(PDO::FETCH_ASSOC);
     $map  = [];
     foreach ($rows as $r) {
@@ -429,7 +427,16 @@ function reg_save_draft(PDO $pdo, ?int $existing_draft_id, array $wanted, array 
                     case 'registration_id':      $kid_vals[] = $registration_id;            break;
                     case 'first_name':           $kid_vals[] = $k['first_name'];            break;
                     case 'last_name':            $kid_vals[] = $k['last_name'];             break;
-                    case 'age':                  $kid_vals[] = $k['age'];                   break;
+                    case 'age':
+                        $age = $k['age'] ?? null;
+                        if ($age !== null && $age !== '') {
+                            $age = (int) $age;
+                            $age = max(0, min(18, $age));
+                        } else {
+                            $age = null;
+                        }
+                        $kid_vals[] = $age;
+                        break;
                     case 'gender':               $kid_vals[] = $k['gender'];                break;
                     case 'date_of_birth':        $kid_vals[] = $k['date_of_birth'] ?? null; break;
                     case 'last_grade_completed': $kid_vals[] = $k['last_grade_completed'] ?? null; break;
@@ -518,7 +525,7 @@ function ag_get_kids(PDO $pdo, string $db): array
                k.registration_id, k.t_shirt_size, k.medical_allergy_info,
                r.home_church
         FROM {$db}registration_kids k
-        JOIN {$db}registrations r ON r.id = k.registration_id
+        JOIN {$db}registrations r ON r.id = k.registration_id AND r.status = 'paid'
         ORDER BY k.age, k.date_of_birth, k.last_grade_completed,
                  k.last_name, k.first_name
     ")->fetchAll(PDO::FETCH_ASSOC);
@@ -576,7 +583,9 @@ function ag_auto_assign_by_grade(
         ->fetchAll(PDO::FETCH_ASSOC);
 
     $kids_list = $pdo
-        ->query("SELECT id, last_grade_completed FROM {$db}registration_kids")
+        ->query("SELECT k.id, k.last_grade_completed 
+                 FROM {$db}registration_kids k
+                 JOIN {$db}registrations r ON r.id = k.registration_id AND r.status = 'paid'")
         ->fetchAll(PDO::FETCH_ASSOC);
 
     // Append any grades found in the DB that aren't in the predefined order
@@ -600,11 +609,16 @@ function ag_auto_assign_by_grade(
 
     $pdo->beginTransaction();
     try {
-        $pdo->exec("UPDATE {$db}registration_kids SET group_id = NULL");
+        // Clear group_id only for paid kids
+        $pdo->exec("UPDATE {$db}registration_kids k
+                    JOIN {$db}registrations r ON r.id = k.registration_id AND r.status = 'paid'
+                    SET k.group_id = NULL");
 
         if ($num_groups > 0) {
             $stmt = $pdo->prepare(
-                "UPDATE {$db}registration_kids SET group_id = ? WHERE id = ?"
+                "UPDATE {$db}registration_kids k
+                 JOIN {$db}registrations r ON r.id = k.registration_id AND r.status = 'paid'
+                 SET k.group_id = ? WHERE k.id = ?"
             );
             foreach ($kids_list as $k) {
                 $grade_raw = isset($k['last_grade_completed']) && $k['last_grade_completed'] !== ''

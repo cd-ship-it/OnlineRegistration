@@ -70,39 +70,41 @@ $t_shirt_size_options = ['Youth XS', 'Youth S', 'Youth M', 'Youth L', 'Youth XL'
 // Remove a key to make a field optional; add one to enforce it.
 // Child fields use the prefix "kid_".
 $required_fields = [
-    // Step 1 – Parent / Guardian
-    'parent_first_name',
-    'parent_last_name',
-    'email',
-    'phone',
-    'address',
-    'hear_from_us',
-    // Step 1 – Emergency contact
-    'emergency_contact_name',
-    'emergency_contact_phone',
-    'emergency_contact_relationship',
-    // Step 2 – Per child (prefix kid_)
-    'kid_first_name',
-    'kid_last_name',
-    'kid_date_of_birth',
-    'kid_gender',
-    'kid_last_grade_completed',
-    'kid_t_shirt_size',
-    // Step 3 – Consent
-    'digital_signature',
-    'photo_consent',
+  // Step 1 – Parent / Guardian
+  'parent_first_name',
+  'parent_last_name',
+  'email',
+  'phone',
+  'address',
+  'hear_from_us',
+  // Step 1 – Emergency contact
+  'emergency_contact_name',
+  'emergency_contact_phone',
+  'emergency_contact_relationship',
+  // Step 2 – Per child (prefix kid_)
+  'kid_first_name',
+  'kid_last_name',
+  'kid_date_of_birth',
+  'kid_gender',
+  'kid_last_grade_completed',
+  'kid_t_shirt_size',
+  // Step 3 – Consent
+  'digital_signature',
+  'photo_consent',
 ];
 
 /** Returns ' required' if $field is in $required_fields, else ''. Use inside HTML input/select. */
-function req(string $field): string {
-    global $required_fields;
-    return in_array($field, $required_fields, true) ? ' required' : '';
+function req(string $field): string
+{
+  global $required_fields;
+  return in_array($field, $required_fields, true) ? ' required' : '';
 }
 
 /** Returns ' *' if $field is in $required_fields, else ''. Append to label text. */
-function req_star(string $field): string {
-    global $required_fields;
-    return in_array($field, $required_fields, true) ? ' *' : '';
+function req_star(string $field): string
+{
+  global $required_fields;
+  return in_array($field, $required_fields, true) ? ' *' : '';
 }
 
 // Load consent items for step 3 from admin settings (each paragraph = one consent item)
@@ -234,6 +236,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $first = trim($k['first_name'] ?? '');
     $last = trim($k['last_name'] ?? '');
     $age = isset($k['age']) && $k['age'] !== '' ? (int) $k['age'] : null;
+    if ($age !== null) {
+      $age = max(0, min(18, $age));
+    }
     $gender = trim($k['gender'] ?? '');
     if (!in_array($gender, ['Boy', 'Girl'], true))
       $gender = null;
@@ -271,6 +276,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
       $errors[] = "Kid $n: grade entering in Fall 2026 is required.";
     if (in_array('kid_t_shirt_size', $required_fields, true) && empty($k['t_shirt_size']))
       $errors[] = "Kid $n: T-shirt size is required.";
+    $raw_age = isset($kids[$i]['age']) && $kids[$i]['age'] !== '' ? (int) $kids[$i]['age'] : null;
+    if ($raw_age !== null && ($raw_age < 0 || $raw_age > 18))
+      $errors[] = "Kid $n: age must be between 0 and 18.";
   }
   if (count($kid_rows) > $max_kids)
     $errors[] = "Maximum $max_kids children per registration.";
@@ -408,6 +416,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
           ]
         ],
         'mode' => 'payment',
+        'allow_promotion_codes' => true,
         'success_url' => APP_URL . '/success?session_id={CHECKOUT_SESSION_ID}',
         'cancel_url' => APP_URL . '/register?cancelled=1',
         'metadata' => ['registration_id' => (string) $registration_id],
@@ -439,7 +448,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         'receive_emails' => $receive_emails,
         'hear_from_us' => $hear_from_us_select,
         'hear_from_us_other' => $hear_from_us_other_txt,
-        'consent_items' => array_map(fn($v) => (string)$v, (array)($_POST['consent_items'] ?? [])),
+        'consent_items' => array_map(fn($v) => (string) $v, (array) ($_POST['consent_items'] ?? [])),
       ];
       header('Location: ' . $session->url, true, 303);
       exit;
@@ -503,7 +512,7 @@ $card_img = rtrim(parse_url(APP_URL, PHP_URL_PATH) ?: '', '/') . '/img/email_her
   <!-- Left: photo -->
   <div style="overflow:hidden;">
     <img src="<?= htmlspecialchars($card_img) ?>" alt="VBS event photo"
-         style="width:100%; height:100%; object-fit:cover; object-position:center; display:block;">
+      style="width:100%; height:100%; object-fit:cover; object-position:center; display:block;">
   </div>
 
   <!-- Right: event details + pricing + CTA -->
@@ -515,42 +524,47 @@ $card_img = rtrim(parse_url(APP_URL, PHP_URL_PATH) ?: '', '/') . '/img/email_her
       </h1>
 
       <p style="display:flex; align-items:flex-start; gap:0.5rem; font-size:0.875rem; color:#4b5563; margin:0;">
-        <svg style="width:1rem; height:1rem; flex-shrink:0; margin-top:2px;" fill="none" stroke="#6366f1" viewBox="0 0 24 24">
+        <svg style="width:1rem; height:1rem; flex-shrink:0; margin-top:2px;" fill="none" stroke="#6366f1"
+          viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
             d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
         </svg>
         <a href="https://www.google.com/maps/search/?api=1&amp;query=658+Gibraltar+Court,+Milpitas,+CA+95035"
-           target="_blank" rel="noopener noreferrer"
-           style="color:#4f46e5; text-decoration:none;"
-           onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">
+          target="_blank" rel="noopener noreferrer" style="color:#4f46e5; text-decoration:none;"
+          onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">
           658 Gibraltar Court, Milpitas, CA 95035
         </a>
       </p>
 
       <?php if ($event_date_range): ?>
-      <p style="display:flex; align-items:flex-start; gap:0.5rem; font-size:0.875rem; color:#4b5563; margin:0;">
-        <svg style="width:1rem; height:1rem; flex-shrink:0; margin-top:2px;" fill="none" stroke="#6366f1" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-        </svg>
-        <?= htmlspecialchars($event_date_range) ?>
-      </p>
+        <p style="display:flex; align-items:flex-start; gap:0.5rem; font-size:0.875rem; color:#4b5563; margin:0;">
+          <svg style="width:1rem; height:1rem; flex-shrink:0; margin-top:2px;" fill="none" stroke="#6366f1"
+            viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+          <?= htmlspecialchars($event_date_range) ?>
+        </p>
       <?php endif; ?>
 
       <?php if ($show_early_bird): ?>
-      <div style="border-radius:0.5rem; background:#fffbeb; border:1px solid #fcd34d; padding:0.625rem 0.875rem;">
-        <p style="font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:#92400e; margin:0 0 0.25rem;">Early bird discount</p>
-        <p style="font-size:1rem; font-weight:700; color:#78350f; margin:0;">
-          <?= format_money($early_bird_price_cents / 100.0) ?>
-          <span style="font-size:0.875rem; font-weight:600;">per child</span>
-        </p>
-        <p style="font-size:0.75rem; color:#92400e; margin:0.125rem 0 0;">Ends <?= htmlspecialchars($early_bird_end_display) ?></p>
-      </div>
+        <div style="border-radius:0.5rem; background:#fffbeb; border:1px solid #fcd34d; padding:0.625rem 0.875rem;">
+          <p
+            style="font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:#92400e; margin:0 0 0.25rem;">
+            Early bird discount</p>
+          <p style="font-size:1rem; font-weight:700; color:#78350f; margin:0;">
+            <?= format_money($early_bird_price_cents / 100.0) ?>
+            <span style="font-size:0.875rem; font-weight:600;">per child</span>
+          </p>
+          <p style="font-size:0.75rem; color:#92400e; margin:0.125rem 0 0;">Ends
+            <?= htmlspecialchars($early_bird_end_display) ?></p>
+        </div>
       <?php endif; ?>
 
       <div>
-        <p style="font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:#6b7280; margin:0 0 0.2rem;">
+        <p
+          style="font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:#6b7280; margin:0 0 0.2rem;">
           <?= $show_early_bird ? 'Regular price' : 'Registration price' ?>
         </p>
         <p style="font-size:1rem; font-weight:700; color:#111827; margin:0;">
@@ -560,7 +574,8 @@ $card_img = rtrim(parse_url(APP_URL, PHP_URL_PATH) ?: '', '/') . '/img/email_her
       </div>
     </div>
 
-    <a href="#form-top" class="btn-emerald" style="display:block; text-align:center; font-size:0.875rem;">Register Now &#8594;</a>
+    <a href="#form-top" class="btn-emerald" style="display:block; text-align:center; font-size:0.875rem;">Register Now
+      &#8594;</a>
   </div>
 </section>
 <div id="form-top"></div>
@@ -577,10 +592,12 @@ $card_img = rtrim(parse_url(APP_URL, PHP_URL_PATH) ?: '', '/') . '/img/email_her
   <?php endif; ?>
   <?php if ($payment_error): ?>
     <div class="card border-red-200 bg-red-50 mb-6 text-red-700 text-sm">We couldn’t start payment.
-      <?= htmlspecialchars($payment_error) ?></div>
+      <?= htmlspecialchars($payment_error) ?>
+    </div>
   <?php endif; ?>
   <?php if (isset($_GET['cancelled'])): ?>
-    <div id="cancel-banner" class="card border-amber-200 bg-amber-50 mb-6 text-amber-800">Payment was cancelled. You can complete the form again when ready.</div>
+    <div id="cancel-banner" class="card border-amber-200 bg-amber-50 mb-6 text-amber-800">Payment was cancelled. You can
+      complete the form again when ready.</div>
   <?php endif; ?>
 
   <?php if ($registration_open !== '1'): ?>
@@ -590,11 +607,11 @@ $card_img = rtrim(parse_url(APP_URL, PHP_URL_PATH) ?: '', '/') . '/img/email_her
     <form method="post" action="" id="registration-form" data-initial-step="<?= (int) $initial_step ?>">
       <input type="hidden" name="action" value="payment">
 
-     
+
 
       <!-- Progress stepper -->
       <nav id="reg-stepper" aria-label="Registration progress"
-           class="flex items-center justify-center py-2 mb-6 select-none">
+        class="flex items-center justify-center py-2 mb-6 select-none">
         <div class="stepper-step" data-step="1">
           <div class="stepper-icon">1</div>
           <span class="stepper-label">Parent Info</span>
@@ -619,46 +636,52 @@ $card_img = rtrim(parse_url(APP_URL, PHP_URL_PATH) ?: '', '/') . '/img/email_her
       <!-- Step 1: Parent + Emergency -->
       <div id="step-1" class="registration-step step-panel" aria-label="Step 1 – Parent &amp; emergency contact">
         <div class="flex items-center gap-2 mb-6">
-          <span
-            class="flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium text-white" style="background:#0284c7">1</span>
+          <span class="flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium text-white"
+            style="background:#0284c7">1</span>
           <h2 class="text-xl font-semibold text-gray-900">Parent / Guardian &amp; Emergency Contact</h2>
         </div>
         <div class="card mb-4">
           <h3 class="text-lg font-semibold text-gray-900 mb-4">Parent / Guardian</h3>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label for="parent_first_name" class="block text-sm font-medium text-gray-700 mb-1">First name<?= req_star('parent_first_name') ?></label>
-              <input type="text" id="parent_first_name" name="parent_first_name"<?= req('parent_first_name') ?> maxlength="100"
-                value="<?= htmlspecialchars($form['parent_first_name']) ?>" class="input-field">
+              <label for="parent_first_name" class="block text-sm font-medium text-gray-700 mb-1">First
+                name<?= req_star('parent_first_name') ?></label>
+              <input type="text" id="parent_first_name" name="parent_first_name" <?= req('parent_first_name') ?>
+                maxlength="100" value="<?= htmlspecialchars($form['parent_first_name']) ?>" class="input-field">
             </div>
             <div>
-              <label for="parent_last_name" class="block text-sm font-medium text-gray-700 mb-1">Last name<?= req_star('parent_last_name') ?></label>
-              <input type="text" id="parent_last_name" name="parent_last_name"<?= req('parent_last_name') ?> maxlength="100"
-                value="<?= htmlspecialchars($form['parent_last_name']) ?>" class="input-field">
+              <label for="parent_last_name" class="block text-sm font-medium text-gray-700 mb-1">Last
+                name<?= req_star('parent_last_name') ?></label>
+              <input type="text" id="parent_last_name" name="parent_last_name" <?= req('parent_last_name') ?>
+                maxlength="100" value="<?= htmlspecialchars($form['parent_last_name']) ?>" class="input-field">
             </div>
           </div>
           <div class="mt-4">
             <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email<?= req_star('email') ?></label>
-            <input type="email" id="email" name="email"<?= req('email') ?> value="<?= htmlspecialchars($form['email']) ?>"
+            <input type="email" id="email" name="email" <?= req('email') ?> value="<?= htmlspecialchars($form['email']) ?>"
               class="input-field">
           </div>
           <div class="mt-4">
             <label for="phone" class="block text-sm font-medium text-gray-700 mb-1">Phone<?= req_star('phone') ?></label>
-            <input type="tel" id="phone" name="phone"<?= req('phone') ?> value="<?= htmlspecialchars($form['phone']) ?>" class="input-field">
+            <input type="tel" id="phone" name="phone" <?= req('phone') ?> value="<?= htmlspecialchars($form['phone']) ?>"
+              class="input-field">
           </div>
           <div class="mt-4">
-            <label for="address" class="block text-sm font-medium text-gray-700 mb-1">Address<?= req_star('address') ?></label>
-            <input type="text" id="address" name="address"<?= req('address') ?> value="<?= htmlspecialchars($form['address']) ?>"
-              class="input-field">
+            <label for="address"
+              class="block text-sm font-medium text-gray-700 mb-1">Address<?= req_star('address') ?></label>
+            <input type="text" id="address" name="address" <?= req('address') ?>
+              value="<?= htmlspecialchars($form['address']) ?>" class="input-field">
           </div>
           <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label for="alternative_pickup_name" class="block text-sm font-medium text-gray-700 mb-1">Alternative pick-up person's name</label>
+              <label for="alternative_pickup_name" class="block text-sm font-medium text-gray-700 mb-1">Alternative
+                pick-up person's name</label>
               <input type="text" id="alternative_pickup_name" name="alternative_pickup_name"
                 value="<?= htmlspecialchars($form['alternative_pickup_name']) ?>" class="input-field" maxlength="100">
             </div>
             <div>
-              <label for="alternative_pickup_phone" id="alternative_pickup_phone_label" class="block text-sm font-medium text-gray-700 mb-1">Alternative pick-up person's phone</label> 
+              <label for="alternative_pickup_phone" id="alternative_pickup_phone_label"
+                class="block text-sm font-medium text-gray-700 mb-1">Alternative pick-up person's phone</label>
               <input type="tel" id="alternative_pickup_phone" name="alternative_pickup_phone"
                 value="<?= htmlspecialchars($form['alternative_pickup_phone']) ?>" class="input-field" maxlength="50">
             </div>
@@ -668,20 +691,25 @@ $card_img = rtrim(parse_url(APP_URL, PHP_URL_PATH) ?: '', '/') . '/img/email_her
           <h3 class="text-lg font-semibold text-gray-900 mb-4">Emergency contact</h3>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label for="emergency_contact_name" class="block text-sm font-medium text-gray-700 mb-1">Name<?= req_star('emergency_contact_name') ?></label>
-              <input type="text" id="emergency_contact_name" name="emergency_contact_name" maxlength="100"<?= req('emergency_contact_name') ?>
-                value="<?= htmlspecialchars($form['emergency_contact_name']) ?>" class="input-field">
+              <label for="emergency_contact_name"
+                class="block text-sm font-medium text-gray-700 mb-1">Name<?= req_star('emergency_contact_name') ?></label>
+              <input type="text" id="emergency_contact_name" name="emergency_contact_name" maxlength="100"
+                <?= req('emergency_contact_name') ?> value="<?= htmlspecialchars($form['emergency_contact_name']) ?>"
+                class="input-field">
             </div>
             <div>
-              <label for="emergency_contact_phone" class="block text-sm font-medium text-gray-700 mb-1">Phone<?= req_star('emergency_contact_phone') ?></label>
-              <input type="tel" id="emergency_contact_phone" name="emergency_contact_phone" maxlength="50"<?= req('emergency_contact_phone') ?>
-                value="<?= htmlspecialchars($form['emergency_contact_phone']) ?>" class="input-field">
+              <label for="emergency_contact_phone"
+                class="block text-sm font-medium text-gray-700 mb-1">Phone<?= req_star('emergency_contact_phone') ?></label>
+              <input type="tel" id="emergency_contact_phone" name="emergency_contact_phone" maxlength="50"
+                <?= req('emergency_contact_phone') ?> value="<?= htmlspecialchars($form['emergency_contact_phone']) ?>"
+                class="input-field">
             </div>
           </div>
           <div class="mt-4">
-            <label for="emergency_contact_relationship"
-              class="block text-sm font-medium text-gray-700 mb-1">Relationship to the child(ren)<?= req_star('emergency_contact_relationship') ?></label>
-            <input type="text" id="emergency_contact_relationship" name="emergency_contact_relationship" maxlength="50"<?= req('emergency_contact_relationship') ?>
+            <label for="emergency_contact_relationship" class="block text-sm font-medium text-gray-700 mb-1">Relationship
+              to the child(ren)<?= req_star('emergency_contact_relationship') ?></label>
+            <input type="text" id="emergency_contact_relationship" name="emergency_contact_relationship" maxlength="50"
+              <?= req('emergency_contact_relationship') ?>
               value="<?= htmlspecialchars($form['emergency_contact_relationship']) ?>" class="input-field">
           </div>
         </div>
@@ -690,10 +718,11 @@ $card_img = rtrim(parse_url(APP_URL, PHP_URL_PATH) ?: '', '/') . '/img/email_her
           <div class="mb-4">
             <label for="hear_from_us_select" class="block text-sm font-medium text-gray-700 mb-1">How did you hear about
               us?<?= req_star('hear_from_us') ?></label>
-            <select name="hear_from_us" id="hear_from_us_select" class="input-field max-w-sm text-sm"<?= req('hear_from_us') ?>
+            <select name="hear_from_us" id="hear_from_us_select" class="input-field max-w-sm text-sm"
+              <?= req('hear_from_us') ?>
               onchange="(function(sel){var wrap=document.getElementById('hear_from_us_other_wrap'),inp=document.getElementById('hear_from_us_other'),isOther=sel.value==='Other';wrap.classList.toggle('hidden',!isOther);inp.required=isOther;if(!isOther)inp.setCustomValidity('');})(this)">
               <option value="">— Select an option —</option>
-              <?php foreach (['Previous VBS', 'Google search', 'Facebook/Instagram/Social Media', 'Friend or family referral','Flyers', 'Other'] as $opt): ?>
+              <?php foreach (['Previous VBS', 'Google search', 'Facebook/Instagram/Social Media', 'Friend or family referral', 'Flyers', 'Other'] as $opt): ?>
                 <option value="<?= htmlspecialchars($opt) ?>" <?= $hear_from_us_value === $opt ? 'selected' : '' ?>>
                   <?= htmlspecialchars($opt) ?>
                 </option>
@@ -702,19 +731,19 @@ $card_img = rtrim(parse_url(APP_URL, PHP_URL_PATH) ?: '', '/') . '/img/email_her
             <div id="hear_from_us_other_wrap" class="mt-2 <?= $hear_from_us_value === 'Other' ? '' : 'hidden' ?>">
               <input type="text" id="hear_from_us_other" name="hear_from_us_other"
                 value="<?= htmlspecialchars($hear_from_us_other_value) ?>" class="input-field max-w-sm text-sm"
-                placeholder="Please specify…"
-                <?= $hear_from_us_value === 'Other' ? 'required' : '' ?>>
+                placeholder="Please specify…" <?= $hear_from_us_value === 'Other' ? 'required' : '' ?>>
             </div>
-          </div>          
+          </div>
           <div class="mb-4">
-            <label for="home_church" class="block text-sm font-medium text-gray-700 mb-1">Which church do you attend? (leave blank if none)<span
-                class="text-gray-500 font-normal"></span></label>
+            <label for="home_church" class="block text-sm font-medium text-gray-700 mb-1">Which church do you attend?
+              (leave blank if none)<span class="text-gray-500 font-normal"></span></label>
             <input type="text" id="home_church" name="home_church" value="<?= htmlspecialchars($form['home_church']) ?>"
               class="input-field" maxlength="255">
             <div class="flex items-center gap-2 mt-2">
               <input type="checkbox" id="crosspoint_attendee" class="rounded border-gray-300 text-indigo-600"
                 onchange="(function(cb){var inp=document.getElementById('home_church');if(cb.checked){inp.value='Crosspoint Church';}else{inp.value='';}})(this)">
-              <label for="crosspoint_attendee" class="text-sm text-gray-700 flex items-center gap-1.5">I am currently attending Crosspoint Church</label>
+              <label for="crosspoint_attendee" class="text-sm text-gray-700 flex items-center gap-1.5">I am currently
+                attending Crosspoint Church</label>
             </div>
           </div>
 
@@ -727,8 +756,8 @@ $card_img = rtrim(parse_url(APP_URL, PHP_URL_PATH) ?: '', '/') . '/img/email_her
       <!-- Step 2: Kids -->
       <div id="step-2" class="registration-step step-panel hidden" aria-label="Step 2 – Add Children">
         <div class="flex items-center gap-2 mb-6">
-          <span
-            class="flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium text-white" style="background:#0284c7">2</span>
+          <span class="flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium text-white"
+            style="background:#0284c7">2</span>
           <h2 class="text-xl font-semibold text-gray-900">Add Children</h2>
           <button type="button" class="ml-auto btn-secondary text-xs px-3 py-1 step-back" data-back="1">← Back</button>
         </div>
@@ -739,30 +768,40 @@ $card_img = rtrim(parse_url(APP_URL, PHP_URL_PATH) ?: '', '/') . '/img/email_her
               <div class="kid-block border border-gray-200 rounded-lg p-4" data-index="<?= $idx ?>">
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label for="kids-<?= $idx ?>-first_name" class="block text-sm font-medium text-gray-700 mb-1">First name<?= req_star('kid_first_name') ?></label>
-                    <input type="text" id="kids-<?= $idx ?>-first_name" name="kids[<?= $idx ?>][first_name]"<?= req('kid_first_name') ?>
-                      maxlength="100" value="<?= htmlspecialchars($kid['first_name']) ?>" class="input-field">
+                    <label for="kids-<?= $idx ?>-first_name" class="block text-sm font-medium text-gray-700 mb-1">First
+                      name<?= req_star('kid_first_name') ?></label>
+                    <input type="text" id="kids-<?= $idx ?>-first_name" name="kids[<?= $idx ?>][first_name]"
+                      <?= req('kid_first_name') ?> maxlength="100" value="<?= htmlspecialchars($kid['first_name']) ?>"
+                      class="input-field">
                   </div>
                   <div>
-                    <label for="kids-<?= $idx ?>-last_name" class="block text-sm font-medium text-gray-700 mb-1">Last name<?= req_star('kid_last_name') ?></label>
-                    <input type="text" id="kids-<?= $idx ?>-last_name" name="kids[<?= $idx ?>][last_name]"<?= req('kid_last_name') ?>
-                      maxlength="100" value="<?= htmlspecialchars($kid['last_name']) ?>" class="input-field">
+                    <label for="kids-<?= $idx ?>-last_name" class="block text-sm font-medium text-gray-700 mb-1">Last
+                      name<?= req_star('kid_last_name') ?></label>
+                    <input type="text" id="kids-<?= $idx ?>-last_name" name="kids[<?= $idx ?>][last_name]"
+                      <?= req('kid_last_name') ?> maxlength="100" value="<?= htmlspecialchars($kid['last_name']) ?>"
+                      class="input-field">
                   </div>
                 </div>
                 <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   <div>
-                    <label for="kids-<?= $idx ?>-date_of_birth" class="block text-sm font-medium text-gray-700 mb-1">Date of birth<?= req_star('kid_date_of_birth') ?></label>
+                    <label for="kids-<?= $idx ?>-date_of_birth" class="block text-sm font-medium text-gray-700 mb-1">Date of
+                      birth<?= req_star('kid_date_of_birth') ?></label>
                     <input type="date" id="kids-<?= $idx ?>-date_of_birth" name="kids[<?= $idx ?>][date_of_birth]"
-                      <?= req('kid_date_of_birth') ?> value="<?= htmlspecialchars($kid['date_of_birth']) ?>" class="input-field dob-input">
+                      <?= req('kid_date_of_birth') ?> value="<?= htmlspecialchars($kid['date_of_birth']) ?>"
+                      class="input-field dob-input" maxlength="10" placeholder="YYYY-MM-DD">
                   </div>
                   <div>
-                    <label for="kids-<?= $idx ?>-age" class="block text-sm font-medium text-gray-700 mb-1">Age <span class="text-gray-400 font-normal text-xs">(age as of VBS first day)</span></label>
+                    <label for="kids-<?= $idx ?>-age" class="block text-sm font-medium text-gray-700 mb-1">Age <span
+                        class="text-gray-400 font-normal text-xs">(age as of VBS first day)</span></label>
                     <input type="number" id="kids-<?= $idx ?>-age" name="kids[<?= $idx ?>][age]" min="1" max="18"
-                      value="<?= htmlspecialchars($kid['age'] !== '' ? $kid['age'] : '') ?>" class="input-field age-input bg-gray-100 cursor-not-allowed" readonly>
+                      value="<?= htmlspecialchars($kid['age'] !== '' ? $kid['age'] : '') ?>"
+                      class="input-field age-input bg-gray-100 cursor-not-allowed" readonly>
                   </div>
                   <div>
-                    <label for="kids-<?= $idx ?>-gender" class="block text-sm font-medium text-gray-700 mb-1">Gender<?= req_star('kid_gender') ?></label>
-                    <select id="kids-<?= $idx ?>-gender" name="kids[<?= $idx ?>][gender]"<?= req('kid_gender') ?> class="input-field">
+                    <label for="kids-<?= $idx ?>-gender"
+                      class="block text-sm font-medium text-gray-700 mb-1">Gender<?= req_star('kid_gender') ?></label>
+                    <select id="kids-<?= $idx ?>-gender" name="kids[<?= $idx ?>][gender]" <?= req('kid_gender') ?>
+                      class="input-field">
                       <option value="">Select</option>
                       <option value="Boy" <?= ($kid['gender'] ?? '') === 'Boy' ? 'selected' : '' ?>>Boy</option>
                       <option value="Girl" <?= ($kid['gender'] ?? '') === 'Girl' ? 'selected' : '' ?>>Girl</option>
@@ -817,17 +856,20 @@ $card_img = rtrim(parse_url(APP_URL, PHP_URL_PATH) ?: '', '/') . '/img/email_her
       <!-- Step 3: Review -->
       <div id="step-3" class="registration-step step-panel hidden" aria-label="Step 3 – Review your information">
         <div class="flex items-center gap-2 mb-6">
-          <span class="flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium text-white" style="background:#0284c7">3</span>
+          <span class="flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium text-white"
+            style="background:#0284c7">3</span>
           <h2 class="text-xl font-semibold text-gray-900">Review Your Information</h2>
           <button type="button" class="ml-auto btn-secondary text-xs px-3 py-1 step-back" data-back="2">← Back</button>
         </div>
-        <p class="text-sm text-gray-500 mb-6">Please confirm everything looks correct before signing. Click <strong>Edit</strong> on any section to go back and make changes.</p>
+        <p class="text-sm text-gray-500 mb-6">Please confirm everything looks correct before signing. Click
+          <strong>Edit</strong> on any section to go back and make changes.</p>
 
         <!-- Parent & Emergency Contact -->
         <div class="card mb-4">
           <div class="flex justify-between items-center mb-3">
             <h3 class="text-base font-semibold text-gray-900">Parent / Guardian &amp; Emergency Contact</h3>
-            <button type="button" class="text-sm text-sky-600 hover:underline font-medium rv-edit-btn" data-goto="1">Edit</button>
+            <button type="button" class="text-sm text-sky-600 hover:underline font-medium rv-edit-btn"
+              data-goto="1">Edit</button>
           </div>
           <dl id="rv-parent" class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm text-gray-700">
             <!-- populated by populateReview() -->
@@ -838,7 +880,8 @@ $card_img = rtrim(parse_url(APP_URL, PHP_URL_PATH) ?: '', '/') . '/img/email_her
         <div class="card mb-4">
           <div class="flex justify-between items-center mb-3">
             <h3 class="text-base font-semibold text-gray-900">Child(ren)</h3>
-            <button type="button" class="text-sm text-sky-600 hover:underline font-medium rv-edit-btn" data-goto="2">Edit</button>
+            <button type="button" class="text-sm text-sky-600 hover:underline font-medium rv-edit-btn"
+              data-goto="2">Edit</button>
           </div>
           <div id="rv-kids" class="space-y-3 text-sm text-gray-700">
             <!-- populated by populateReview() -->
@@ -847,15 +890,16 @@ $card_img = rtrim(parse_url(APP_URL, PHP_URL_PATH) ?: '', '/') . '/img/email_her
 
         <div class="flex flex-wrap gap-4 justify-between items-center mt-6">
           <button type="button" class="btn-secondary px-4 py-2 step-back" data-back="2">← Back</button>
-          <button type="button" class="btn-emerald px-6 py-3 step-next" data-next="4">Looks good — proceed to consent</button>
+          <button type="button" class="btn-emerald px-6 py-3 step-next" data-next="4">Looks good — proceed to
+            consent</button>
         </div>
       </div>
 
       <!-- Step 4: Consent + Signature -->
       <div id="step-4" class="registration-step step-panel hidden" aria-label="Step 4 – Consent &amp; payment">
         <div class="flex items-center gap-2 mb-6">
-          <span
-            class="flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium text-white" style="background:#0284c7">4</span>
+          <span class="flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium text-white"
+            style="background:#0284c7">4</span>
           <h2 class="text-xl font-semibold text-gray-900">Consent &amp; Payment</h2>
           <button type="button" class="ml-auto btn-secondary text-xs px-3 py-1 step-back" data-back="3">← Back</button>
         </div>
@@ -930,10 +974,12 @@ $card_img = rtrim(parse_url(APP_URL, PHP_URL_PATH) ?: '', '/') . '/img/email_her
 
         </div>
         <div class="card mb-6">
-          <label for="digital_signature" class="block text-sm font-medium text-gray-700 mb-2">Digital signature<?= req_star('digital_signature') ?></label>
-          <p class="text-sm text-gray-500 mb-2">By typing my name below, I hereby acknowledge that I have read all consents and this Privacy Notice, and that all information I have submitted is correct.</p>
-          <input type="text" id="digital_signature" name="digital_signature"<?= req('digital_signature') ?> maxlength="200"
-            value="<?= htmlspecialchars($digital_signature_value) ?>" class="input-field max-w-md"
+          <label for="digital_signature" class="block text-sm font-medium text-gray-700 mb-2">Digital
+            signature<?= req_star('digital_signature') ?></label>
+          <p class="text-sm text-gray-500 mb-2">By typing my name below, I hereby acknowledge that I have read all
+            consents and this Privacy Notice, and that all information I have submitted is correct.</p>
+          <input type="text" id="digital_signature" name="digital_signature" <?= req('digital_signature') ?>
+            maxlength="200" value="<?= htmlspecialchars($digital_signature_value) ?>" class="input-field max-w-md"
             placeholder="Full legal name" autocomplete="name">
         </div>
         <div class="flex flex-wrap gap-4 justify-between items-center">
@@ -979,7 +1025,6 @@ $card_img = rtrim(parse_url(APP_URL, PHP_URL_PATH) ?: '', '/') . '/img/email_her
       transform: translateY(0);
     }
   }
-
 </style>
 <script src="<?= rtrim(parse_url(APP_URL, PHP_URL_PATH) ?: '', '/') ?>/js/review-helpers.js"></script>
 <script>
@@ -993,9 +1038,9 @@ $card_img = rtrim(parse_url(APP_URL, PHP_URL_PATH) ?: '', '/') . '/img/email_her
         var s = parseInt(el.dataset.step, 10);
         var icon = el.querySelector('.stepper-icon');
         el.classList.remove('upcoming', 'active', 'completed');
-        if (s < n)        { el.classList.add('completed'); icon.textContent = '✓'; }
-        else if (s === n) { el.classList.add('active');    icon.textContent = s;   }
-        else              { el.classList.add('upcoming');  icon.textContent = s;   }
+        if (s < n) { el.classList.add('completed'); icon.textContent = '✓'; }
+        else if (s === n) { el.classList.add('active'); icon.textContent = s; }
+        else { el.classList.add('upcoming'); icon.textContent = s; }
       });
       document.querySelectorAll('#reg-stepper .stepper-connector').forEach(function (line) {
         var after = parseInt(line.dataset.after, 10);
@@ -1025,9 +1070,9 @@ $card_img = rtrim(parse_url(APP_URL, PHP_URL_PATH) ?: '', '/') . '/img/email_her
     }
 
     /* ── Review helpers (loaded from js/review-helpers.js) ──────────── */
-    var escHtml      = window.ReviewHelpers.escHtml;
-    var rvRow        = window.ReviewHelpers.rvRow;
-    var rvVal        = window.ReviewHelpers.rvVal;
+    var escHtml = window.ReviewHelpers.escHtml;
+    var rvRow = window.ReviewHelpers.rvRow;
+    var rvVal = window.ReviewHelpers.rvVal;
     var kidReviewCard = window.ReviewHelpers.kidReviewCard;
 
     function populateReview() {
@@ -1040,14 +1085,14 @@ $card_img = rtrim(parse_url(APP_URL, PHP_URL_PATH) ?: '', '/') . '/img/email_her
       var parentEl = document.getElementById('rv-parent');
       if (parentEl) {
         parentEl.innerHTML =
-          rvRow('Name',              rvVal('parent_first_name') + ' ' + rvVal('parent_last_name')) +
-          rvRow('Email',             rvVal('email')) +
-          rvRow('Phone',             rvVal('phone')) +
-          rvRow('Address',           rvVal('address')) +
-          rvRow('Church',            rvVal('home_church')) +
-          rvRow('Alt. pick-up',      rvVal('alternative_pickup_name') + (rvVal('alternative_pickup_phone') ? ' · ' + rvVal('alternative_pickup_phone') : '')) +
+          rvRow('Name', rvVal('parent_first_name') + ' ' + rvVal('parent_last_name')) +
+          rvRow('Email', rvVal('email')) +
+          rvRow('Phone', rvVal('phone')) +
+          rvRow('Address', rvVal('address')) +
+          rvRow('Church', rvVal('home_church')) +
+          rvRow('Alt. pick-up', rvVal('alternative_pickup_name') + (rvVal('alternative_pickup_phone') ? ' · ' + rvVal('alternative_pickup_phone') : '')) +
           rvRow('Emergency contact', rvVal('emergency_contact_name') + ' · ' + rvVal('emergency_contact_phone') + ' (' + rvVal('emergency_contact_relationship') + ')') +
-          rvRow('Heard about us',    hearVal);
+          rvRow('Heard about us', hearVal);
       }
 
       // ── Kids block ──
@@ -1055,16 +1100,16 @@ $card_img = rtrim(parse_url(APP_URL, PHP_URL_PATH) ?: '', '/') . '/img/email_her
       if (kidsEl) {
         var kidHtml = '';
         document.querySelectorAll('#kids-container .kid-block').forEach(function (block, i) {
-          var g = function(sel) { var e = block.querySelector(sel); return e ? e.value.trim() : ''; };
+          var g = function (sel) { var e = block.querySelector(sel); return e ? e.value.trim() : ''; };
           kidHtml += kidReviewCard({
-            first_name:   g('[name*="[first_name]"]'),
-            last_name:    g('[name*="[last_name]"]'),
+            first_name: g('[name*="[first_name]"]'),
+            last_name: g('[name*="[last_name]"]'),
             date_of_birth: g('[name*="[date_of_birth]"]'),
-            age:          g('[name*="[age]"]'),
-            gender:       g('[name*="[gender]"]'),
-            last_grade:   g('[name*="[last_grade_completed]"]'),
-            t_shirt:      g('[name*="[t_shirt_size]"]'),
-            medical:      g('[name*="[medical_allergy_info]"]'),
+            age: g('[name*="[age]"]'),
+            gender: g('[name*="[gender]"]'),
+            last_grade: g('[name*="[last_grade_completed]"]'),
+            t_shirt: g('[name*="[t_shirt_size]"]'),
+            medical: g('[name*="[medical_allergy_info]"]'),
           }, i);
         });
         kidsEl.innerHTML = kidHtml || '<p class="text-gray-400 italic">No children added.</p>';
@@ -1082,7 +1127,7 @@ $card_img = rtrim(parse_url(APP_URL, PHP_URL_PATH) ?: '', '/') . '/img/email_her
 
     form.querySelectorAll('.step-next').forEach(function (btn) {
       btn.addEventListener('click', function () {
-        var next    = parseInt(btn.getAttribute('data-next'), 10);
+        var next = parseInt(btn.getAttribute('data-next'), 10);
         var current = next - 1;
         var currentEl = document.getElementById('step-' + current);
         if (currentEl) {
@@ -1100,11 +1145,11 @@ $card_img = rtrim(parse_url(APP_URL, PHP_URL_PATH) ?: '', '/') . '/img/email_her
               function clearOnFix() {
                 if (el.checkValidity()) {
                   el.classList.remove('field-error');
-                  el.removeEventListener('input',  clearOnFix);
+                  el.removeEventListener('input', clearOnFix);
                   el.removeEventListener('change', clearOnFix);
                 }
               }
-              el.addEventListener('input',  clearOnFix);
+              el.addEventListener('input', clearOnFix);
               el.addEventListener('change', clearOnFix);
             });
             // Scroll to and report the first problem
@@ -1142,10 +1187,10 @@ $card_img = rtrim(parse_url(APP_URL, PHP_URL_PATH) ?: '', '/') . '/img/email_her
 
     // Required kid sub-fields (driven by $required_fields on the server)
     var requiredKidFields = <?= json_encode(array_values(array_filter(
-        ['first_name', 'last_name', 'date_of_birth', 'last_grade_completed', 't_shirt_size', 'gender', 'age'],
-        fn($f) => in_array('kid_' . $f, $required_fields, true)
+      ['first_name', 'last_name', 'date_of_birth', 'last_grade_completed', 't_shirt_size', 'gender', 'age'],
+      fn($f) => in_array('kid_' . $f, $required_fields, true)
     ))) ?>;
-    function kidReq(f)  { return requiredKidFields.indexOf(f) !== -1 ? ' required' : ''; }
+    function kidReq(f) { return requiredKidFields.indexOf(f) !== -1 ? ' required' : ''; }
     function kidStar(f) { return requiredKidFields.indexOf(f) !== -1 ? ' *' : ''; }
 
     var container = document.getElementById('kids-container');
@@ -1167,14 +1212,14 @@ $card_img = rtrim(parse_url(APP_URL, PHP_URL_PATH) ?: '', '/') . '/img/email_her
     // Enable "+ Add Child" only when every required field is filled AND no age is too young
     function refreshAddBtn() {
       if (!addBtn) return;
-      var atMax      = container.querySelectorAll('.kid-block').length >= maxKids;
+      var atMax = container.querySelectorAll('.kid-block').length >= maxKids;
       var anyInvalid = !!container.querySelector('[required]:invalid')  // empty required fields
-                    || !!container.querySelector('.age-input:invalid'); // age setCustomValidity (too young)
+        || !!container.querySelector('.age-input:invalid'); // age setCustomValidity (too young)
       addBtn.disabled = atMax || anyInvalid;
     }
 
     // Re-evaluate on any input or selection change inside the kids container
-    container.addEventListener('input',  refreshAddBtn);
+    container.addEventListener('input', refreshAddBtn);
     container.addEventListener('change', refreshAddBtn);
 
     // Run once on load so the button reflects pre-filled (session-restored) data
@@ -1190,7 +1235,7 @@ $card_img = rtrim(parse_url(APP_URL, PHP_URL_PATH) ?: '', '/') . '/img/email_her
           '<div><label class="block text-sm font-medium text-gray-700 mb-1">First name' + kidStar('first_name') + '</label><input type="text" name="kids[' + index + '][first_name]"' + kidReq('first_name') + ' maxlength="100" class="input-field"></div>' +
           '<div><label class="block text-sm font-medium text-gray-700 mb-1">Last name' + kidStar('last_name') + '</label><input type="text" name="kids[' + index + '][last_name]"' + kidReq('last_name') + ' maxlength="100" class="input-field"></div></div>' +
           '<div class="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">' +
-          '<div><label class="block text-sm font-medium text-gray-700 mb-1">Date of birth' + kidStar('date_of_birth') + '</label><input type="date" name="kids[' + index + '][date_of_birth]"' + kidReq('date_of_birth') + ' class="input-field dob-input"></div>' +
+          '<div><label class="block text-sm font-medium text-gray-700 mb-1">Date of birth' + kidStar('date_of_birth') + '</label><input type="date" name="kids[' + index + '][date_of_birth]"' + kidReq('date_of_birth') + ' maxlength="10" placeholder="YYYY-MM-DD" class="input-field dob-input"></div>' +
           '<div><label class="block text-sm font-medium text-gray-700 mb-1">Age' + kidStar('age') + ' <span class="text-gray-400 font-normal text-xs">(age as of VBS first day)</span></label><input type="number" name="kids[' + index + '][age]"' + kidReq('age') + ' min="1" max="18" class="input-field age-input bg-gray-100 cursor-not-allowed" readonly></div>' +
           '<div><label class="block text-sm font-medium text-gray-700 mb-1">Gender' + kidStar('gender') + '</label><select name="kids[' + index + '][gender]"' + kidReq('gender') + ' class="input-field"><option value="">Select</option><option value="Boy">Boy</option><option value="Girl">Girl</option></select></div>' +
           '</div>' +
@@ -1224,8 +1269,8 @@ $card_img = rtrim(parse_url(APP_URL, PHP_URL_PATH) ?: '', '/') . '/img/email_her
         // Direct listeners on the new DOB input as a belt-and-suspenders fallback
         var newDob = div.querySelector('.dob-input');
         if (newDob) {
-          newDob.addEventListener('change', function() { applyDobToAge(newDob); });
-          newDob.addEventListener('input',  function() { applyDobToAge(newDob); });
+          newDob.addEventListener('change', function () { applyDobToAge(newDob); });
+          newDob.addEventListener('input', function () { applyDobToAge(newDob); });
         }
       });
     }
@@ -1263,7 +1308,7 @@ $card_img = rtrim(parse_url(APP_URL, PHP_URL_PATH) ?: '', '/') . '/img/email_her
 
     // Auto-calculate age as of event start date (falls back to today PT if not set)
     var eventStartDate = <?= json_encode($event_start_date ?: '') ?>;
-    var MIN_KID_AGE    = 4;
+    var MIN_KID_AGE = 4;
     var AGE_GRACE_DAYS = 0; // kids whose birthday falls within this many days after event start are allowed
 
     // Human-readable version of the event start date for warning messages
@@ -1288,19 +1333,37 @@ $card_img = rtrim(parse_url(APP_URL, PHP_URL_PATH) ?: '', '/') . '/img/email_her
       var dob = new Date(dobValue + 'T00:00:00');
       if (isNaN(dob) || isNaN(refDate)) return null;
       var age = refDate.getFullYear() - dob.getFullYear();
-      var m   = refDate.getMonth() - dob.getMonth();
+      var m = refDate.getMonth() - dob.getMonth();
       // Birthday ON the reference date counts — only decrement when strictly before
       if (m < 0 || (m === 0 && refDate.getDate() < dob.getDate())) age--;
       return age;
     }
 
+    function isValidDobString(val) {
+      if (!val || typeof val !== 'string') return false;
+      var trimmed = val.trim();
+      if (trimmed.length > 10) return false;
+      var match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(trimmed);
+      if (!match) return false;
+      var y = parseInt(match[1], 10), m = parseInt(match[2], 10), d = parseInt(match[3], 10);
+      if (m < 1 || m > 12 || d < 1 || d > 31) return false;
+      var date = new Date(y, m - 1, d);
+      return date.getFullYear() === y && date.getMonth() === m - 1 && date.getDate() === d;
+    }
+
     function applyDobToAge(dobInput) {
-      var block    = dobInput.closest('.kid-block');
+      var block = dobInput.closest('.kid-block');
       if (!block) return;
       var ageInput = block.querySelector('.age-input');
       if (!ageInput) return;
 
-      var age = calcAge(dobInput.value);
+      var rawVal = dobInput.value;
+      if (rawVal.length > 10) {
+        dobInput.value = rawVal.slice(0, 10);
+        rawVal = dobInput.value;
+      }
+
+      var age = calcAge(rawVal);
       if (age !== null) ageInput.value = age;
 
       // Find or create the inline warning element (inserted after the DOB/Age/Gender grid row)
@@ -1313,9 +1376,19 @@ $card_img = rtrim(parse_url(APP_URL, PHP_URL_PATH) ?: '', '/') . '/img/email_her
         else ageInput.parentNode.appendChild(warning);
       }
 
+      if (rawVal && !isValidDobString(rawVal)) {
+        warning.textContent = 'Invalid date format. Please use YYYY-MM-DD (e.g. 2015-06-15).';
+        dobInput.setCustomValidity('Invalid date format. Use YYYY-MM-DD.');
+        ageInput.value = '';
+        ageInput.setCustomValidity('');
+        refreshAddBtn();
+        return;
+      }
+      dobInput.setCustomValidity('');
+
       // Allow through if child reaches MIN_KID_AGE within the grace window after event start
-      var ageWithGrace = calcAge(dobInput.value, AGE_GRACE_DAYS);
-      var tooYoung = dobInput.value && age !== null && ageWithGrace !== null && ageWithGrace < MIN_KID_AGE;
+      var ageWithGrace = calcAge(rawVal, AGE_GRACE_DAYS);
+      var tooYoung = rawVal && age !== null && ageWithGrace !== null && ageWithGrace < MIN_KID_AGE;
       if (tooYoung) {
         var dateNote = eventDateLabel ? ' as of ' + eventDateLabel : '';
         warning.textContent = 'Minimum age is ' + MIN_KID_AGE + dateNote
@@ -1335,9 +1408,9 @@ $card_img = rtrim(parse_url(APP_URL, PHP_URL_PATH) ?: '', '/') . '/img/email_her
       if (e.target.classList.contains('dob-input')) applyDobToAge(e.target);
     }
     form.addEventListener('change', onDobEvent);
-    form.addEventListener('input',  onDobEvent);
+    form.addEventListener('input', onDobEvent);
     // Also populate age for any pre-filled DOB values on page load
-    form.querySelectorAll('.dob-input').forEach(function(el) {
+    form.querySelectorAll('.dob-input').forEach(function (el) {
       if (el.value) applyDobToAge(el);
     });
 
@@ -1415,7 +1488,7 @@ $card_img = rtrim(parse_url(APP_URL, PHP_URL_PATH) ?: '', '/') . '/img/email_her
     }
     // Alternative pick-up phone becomes required when a name is entered
     (function () {
-      var nameInput  = document.getElementById('alternative_pickup_name');
+      var nameInput = document.getElementById('alternative_pickup_name');
       var phoneInput = document.getElementById('alternative_pickup_phone');
       var phoneLabel = document.getElementById('alternative_pickup_phone_label');
       if (!nameInput || !phoneInput || !phoneLabel) return;
