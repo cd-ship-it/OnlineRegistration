@@ -653,12 +653,12 @@ $card_img = rtrim(parse_url(APP_URL, PHP_URL_PATH) ?: '', '/') . '/img/email_her
           </div>
           <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label for="alternative_pickup_name" class="block text-sm font-medium text-gray-700 mb-1">Alternative pick-up name</label>
+              <label for="alternative_pickup_name" class="block text-sm font-medium text-gray-700 mb-1">Alternative pick-up person's name</label>
               <input type="text" id="alternative_pickup_name" name="alternative_pickup_name"
                 value="<?= htmlspecialchars($form['alternative_pickup_name']) ?>" class="input-field" maxlength="100">
             </div>
             <div>
-              <label for="alternative_pickup_phone" id="alternative_pickup_phone_label" class="block text-sm font-medium text-gray-700 mb-1">Alternative pick-up phone</label>
+              <label for="alternative_pickup_phone" id="alternative_pickup_phone_label" class="block text-sm font-medium text-gray-700 mb-1">Alternative pick-up person's phone</label> 
               <input type="tel" id="alternative_pickup_phone" name="alternative_pickup_phone"
                 value="<?= htmlspecialchars($form['alternative_pickup_phone']) ?>" class="input-field" maxlength="50">
             </div>
@@ -666,7 +666,7 @@ $card_img = rtrim(parse_url(APP_URL, PHP_URL_PATH) ?: '', '/') . '/img/email_her
         </div>
         <div class="card mb-6">
           <h3 class="text-lg font-semibold text-gray-900 mb-4">Emergency contact</h3>
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label for="emergency_contact_name" class="block text-sm font-medium text-gray-700 mb-1">Name<?= req_star('emergency_contact_name') ?></label>
               <input type="text" id="emergency_contact_name" name="emergency_contact_name" maxlength="100"<?= req('emergency_contact_name') ?>
@@ -677,28 +677,17 @@ $card_img = rtrim(parse_url(APP_URL, PHP_URL_PATH) ?: '', '/') . '/img/email_her
               <input type="tel" id="emergency_contact_phone" name="emergency_contact_phone" maxlength="50"<?= req('emergency_contact_phone') ?>
                 value="<?= htmlspecialchars($form['emergency_contact_phone']) ?>" class="input-field">
             </div>
-            <div>
-              <label for="emergency_contact_relationship"
-                class="block text-sm font-medium text-gray-700 mb-1">Relationship to the child(ren)<?= req_star('emergency_contact_relationship') ?></label>
-              <input type="text" id="emergency_contact_relationship" name="emergency_contact_relationship" maxlength="50"<?= req('emergency_contact_relationship') ?>
-                value="<?= htmlspecialchars($form['emergency_contact_relationship']) ?>" class="input-field">
-            </div>
+          </div>
+          <div class="mt-4">
+            <label for="emergency_contact_relationship"
+              class="block text-sm font-medium text-gray-700 mb-1">Relationship to the child(ren)<?= req_star('emergency_contact_relationship') ?></label>
+            <input type="text" id="emergency_contact_relationship" name="emergency_contact_relationship" maxlength="50"<?= req('emergency_contact_relationship') ?>
+              value="<?= htmlspecialchars($form['emergency_contact_relationship']) ?>" class="input-field">
           </div>
         </div>
         <div class="card mb-6">
           <h3 class="text-lg font-semibold text-gray-900 mb-4">Tell us a little bit more about yourself</h3>
           <div class="mb-4">
-            <label for="home_church" class="block text-sm font-medium text-gray-700 mb-1">Which church do you attend? (leave blank if none)<span
-                class="text-gray-500 font-normal"></span></label>
-            <input type="text" id="home_church" name="home_church" value="<?= htmlspecialchars($form['home_church']) ?>"
-              class="input-field" maxlength="255">
-            <div class="flex items-center gap-2 mt-2">
-              <input type="checkbox" id="crosspoint_attendee" class="rounded border-gray-300 text-indigo-600"
-                onchange="(function(cb){var inp=document.getElementById('home_church');if(cb.checked){inp.value='Crosspoint Church';}else{inp.value='';}})(this)">
-              <label for="crosspoint_attendee" class="text-sm text-gray-700 flex items-center gap-1.5">I am currently attending <img src="<?= rtrim(defined('APP_URL') ? APP_URL : '', '/') ?>/img/Xpt-ID2015_color_round-1.png" alt="Crosspoint" class="h-5 w-5 object-contain inline-block"> Crosspoint Church</label>
-            </div>
-          </div>
-          <div class="pt-4 border-t border-gray-100">
             <label for="hear_from_us_select" class="block text-sm font-medium text-gray-700 mb-1">How did you hear about
               us?<?= req_star('hear_from_us') ?></label>
             <select name="hear_from_us" id="hear_from_us_select" class="input-field max-w-sm text-sm"<?= req('hear_from_us') ?>
@@ -716,7 +705,19 @@ $card_img = rtrim(parse_url(APP_URL, PHP_URL_PATH) ?: '', '/') . '/img/email_her
                 placeholder="Please specify…"
                 <?= $hear_from_us_value === 'Other' ? 'required' : '' ?>>
             </div>
+          </div>          
+          <div class="mb-4">
+            <label for="home_church" class="block text-sm font-medium text-gray-700 mb-1">Which church do you attend? (leave blank if none)<span
+                class="text-gray-500 font-normal"></span></label>
+            <input type="text" id="home_church" name="home_church" value="<?= htmlspecialchars($form['home_church']) ?>"
+              class="input-field" maxlength="255">
+            <div class="flex items-center gap-2 mt-2">
+              <input type="checkbox" id="crosspoint_attendee" class="rounded border-gray-300 text-indigo-600"
+                onchange="(function(cb){var inp=document.getElementById('home_church');if(cb.checked){inp.value='Crosspoint Church';}else{inp.value='';}})(this)">
+              <label for="crosspoint_attendee" class="text-sm text-gray-700 flex items-center gap-1.5">I am currently attending Crosspoint Church</label>
+            </div>
           </div>
+
         </div>
         <div class="flex justify-end">
           <button type="button" class="btn-emerald px-6 py-3 step-next" data-next="2">Next: Add Child(ren)</button>
@@ -757,7 +758,7 @@ $card_img = rtrim(parse_url(APP_URL, PHP_URL_PATH) ?: '', '/') . '/img/email_her
                   <div>
                     <label for="kids-<?= $idx ?>-age" class="block text-sm font-medium text-gray-700 mb-1">Age <span class="text-gray-400 font-normal text-xs">(age as of VBS first day)</span></label>
                     <input type="number" id="kids-<?= $idx ?>-age" name="kids[<?= $idx ?>][age]" min="1" max="18"
-                      value="<?= htmlspecialchars($kid['age'] !== '' ? $kid['age'] : '') ?>" class="input-field age-input">
+                      value="<?= htmlspecialchars($kid['age'] !== '' ? $kid['age'] : '') ?>" class="input-field age-input bg-gray-100 cursor-not-allowed" readonly>
                   </div>
                   <div>
                     <label for="kids-<?= $idx ?>-gender" class="block text-sm font-medium text-gray-700 mb-1">Gender<?= req_star('kid_gender') ?></label>
@@ -1190,7 +1191,7 @@ $card_img = rtrim(parse_url(APP_URL, PHP_URL_PATH) ?: '', '/') . '/img/email_her
           '<div><label class="block text-sm font-medium text-gray-700 mb-1">Last name' + kidStar('last_name') + '</label><input type="text" name="kids[' + index + '][last_name]"' + kidReq('last_name') + ' maxlength="100" class="input-field"></div></div>' +
           '<div class="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">' +
           '<div><label class="block text-sm font-medium text-gray-700 mb-1">Date of birth' + kidStar('date_of_birth') + '</label><input type="date" name="kids[' + index + '][date_of_birth]"' + kidReq('date_of_birth') + ' class="input-field dob-input"></div>' +
-          '<div><label class="block text-sm font-medium text-gray-700 mb-1">Age' + kidStar('age') + ' <span class="text-gray-400 font-normal text-xs">(age as of VBS first day)</span></label><input type="number" name="kids[' + index + '][age]"' + kidReq('age') + ' min="1" max="18" class="input-field age-input"></div>' +
+          '<div><label class="block text-sm font-medium text-gray-700 mb-1">Age' + kidStar('age') + ' <span class="text-gray-400 font-normal text-xs">(age as of VBS first day)</span></label><input type="number" name="kids[' + index + '][age]"' + kidReq('age') + ' min="1" max="18" class="input-field age-input bg-gray-100 cursor-not-allowed" readonly></div>' +
           '<div><label class="block text-sm font-medium text-gray-700 mb-1">Gender' + kidStar('gender') + '</label><select name="kids[' + index + '][gender]"' + kidReq('gender') + ' class="input-field"><option value="">Select</option><option value="Boy">Boy</option><option value="Girl">Girl</option></select></div>' +
           '</div>' +
           '<div class="mt-4"><label class="block text-sm font-medium text-gray-700 mb-1">Child Grade Entering in Fall 2026 (Note: Not the current grade)' + kidStar('last_grade_completed') + '</label><select name="kids[' + index + '][last_grade_completed]"' + kidReq('last_grade_completed') + ' class="input-field w-full"><option value="">Select</option>' + gradeOptionsHtml + '</select></div>' +
@@ -1238,11 +1239,15 @@ $card_img = rtrim(parse_url(APP_URL, PHP_URL_PATH) ?: '', '/') . '/img/email_her
       if (e.target.classList.contains('remove-kid')) removeKid(e.target.closest('.kid-block'));
     });
 
-    // Crosspoint attendee checkbox: sync with home_church on load
+    // Crosspoint attendee checkbox: sync with home_church on load and when user types
     (function () {
       var cb = document.getElementById('crosspoint_attendee');
       var inp = document.getElementById('home_church');
-      if (cb && inp) cb.checked = (inp.value.trim() === 'Crosspoint Church');
+      if (!cb || !inp) return;
+      cb.checked = (inp.value.trim() === 'Crosspoint Church');
+      inp.addEventListener('input', function () {
+        if (inp.value.trim() !== 'Crosspoint Church') cb.checked = false;
+      });
     })();
 
     // Photo consent (Section 5): only one of Yes/No may be checked
@@ -1418,7 +1423,7 @@ $card_img = rtrim(parse_url(APP_URL, PHP_URL_PATH) ?: '', '/') . '/img/email_her
       function syncAltPickupRequired() {
         var hasName = nameInput.value.trim() !== '';
         phoneInput.required = hasName;
-        phoneLabel.textContent = 'Alternative pick-up phone' + (hasName ? ' *' : '');
+        phoneLabel.textContent = 'Alternative pick-up person\'s phone' + (hasName ? ' *' : '');
       }
 
       nameInput.addEventListener('input', syncAltPickupRequired);

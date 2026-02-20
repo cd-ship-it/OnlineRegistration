@@ -30,8 +30,8 @@ function escHtml(str) {
 function rvRow(label, value) {
   if (!value || !value.trim()) return '';
   return '<div>'
-    + '<dt class="font-medium text-gray-500">' + escHtml(label) + '</dt>'
-    + '<dd class="mt-0.5">' + escHtml(value) + '</dd>'
+    + '<dt class="font-medium text-gray-100">' + escHtml(label) + '</dt>'
+    + '<dd class="mt-0.5 font-semibold text-gray-900">' + escHtml(value) + '</dd>'
     + '</div>';
 }
 
@@ -54,12 +54,12 @@ function rvVal(id) {
  */
 function kidReviewCard(kid, index) {
   var rows = [
-    kid.date_of_birth ? '<div><dt class="text-gray-500 text-xs">Birthday</dt><dd>' + escHtml(kid.date_of_birth) + '</dd></div>' : '',
-    kid.age            ? '<div><dt class="text-gray-500 text-xs">Age</dt><dd>' + escHtml(String(kid.age)) + '</dd></div>' : '',
-    kid.gender         ? '<div><dt class="text-gray-500 text-xs">Gender</dt><dd>' + escHtml(kid.gender) + '</dd></div>' : '',
-    kid.last_grade     ? '<div><dt class="text-gray-500 text-xs">Grade entering</dt><dd>' + escHtml(kid.last_grade) + '</dd></div>' : '',
-    kid.t_shirt        ? '<div><dt class="text-gray-500 text-xs">T-shirt</dt><dd>' + escHtml(kid.t_shirt) + '</dd></div>' : '',
-    kid.medical        ? '<div class="col-span-2 sm:col-span-3"><dt class="text-gray-500 text-xs">Allergies / medical</dt><dd>' + escHtml(kid.medical) + '</dd></div>' : '',
+    kid.date_of_birth ? '<div><dt class="text-gray-500 text-xs">Birthday</dt><dd class="font-semibold text-gray-900">' + escHtml(kid.date_of_birth) + '</dd></div>' : '',
+    kid.age            ? '<div><dt class="text-gray-500 text-xs">Age</dt><dd class="font-semibold text-gray-900">' + escHtml(String(kid.age)) + '</dd></div>' : '',
+    kid.gender         ? '<div><dt class="text-gray-500 text-xs">Gender</dt><dd class="font-semibold text-gray-900">' + escHtml(kid.gender) + '</dd></div>' : '',
+    kid.last_grade     ? '<div><dt class="text-gray-500 text-xs">Grade entering</dt><dd class="font-semibold text-gray-900">' + escHtml(kid.last_grade) + '</dd></div>' : '',
+    kid.t_shirt        ? '<div><dt class="text-gray-500 text-xs">T-shirt</dt><dd class="font-semibold text-gray-900">' + escHtml(kid.t_shirt) + '</dd></div>' : '',
+    kid.medical        ? '<div class="col-span-2 sm:col-span-3"><dt class="text-gray-500 text-xs">Allergies / medical</dt><dd class="font-semibold text-gray-900">' + escHtml(kid.medical) + '</dd></div>' : '',
   ].join('');
 
   return '<div class="border border-gray-100 rounded-lg p-3">'
