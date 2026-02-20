@@ -6,6 +6,8 @@
 /logs/
 *.xls
 *.xlsx
+*.resolved
+vbs-email.html_back
 # Ignore loose test/scratch files at the root, but allow the tests/ directory
 *test*.*
 !tests/
