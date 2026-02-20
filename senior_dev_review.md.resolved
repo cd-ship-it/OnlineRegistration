@@ -1,0 +1,74 @@
+# Prioritized Senior Developer Audit: VBS Online Registration
+
+This report combines architectural observations with severity rankings and specific remediation steps.
+
+---
+
+## 🔴 CRITICAL: Email Confirmation Race Condition
+**Severity:** Critical (Broken Business Flow)
+**Why:** There is a high probability that users will **not receive their confirmation email**. If the Stripe webhook updates the database status to [paid](file:///Users/fredng/projects/OnlineRegistration/includes/db_helper.php#197-210) before the user's browser redirects to the success page, the app thinks the email step is already "handled" (or skipped) and sends nothing.
+
+### How to Fix: Idempotent Side Effects
+1.  **Shared Service**: Move the "finalize" logic into a single function `registration_finalize_payment($pdo, $reg_id)` in [db_helper.php](file:///Users/fredng/projects/OnlineRegistration/includes/db_helper.php).
+2.  **Tracking Column**: Add a `confirmation_email_sent` (boolean) column to [registrations](file:///Users/fredng/projects/OnlineRegistration/includes/db_helper.php#24-44).
+3.  **Atomic Send**: Inside the function, use a transaction. Only trigger the email if `confirmation_email_sent` is still `0`. Immediately update it to `1` after sending.
+4.  **Consolidated Call**: Invoke this function from *both* [success.php](file:///Users/fredng/projects/OnlineRegistration/success.php) and [stripe-webhook.php](file:///Users/fredng/projects/OnlineRegistration/stripe-webhook.php). 
+
+---
+
+## 🟠 HIGH: CSRF (Cross-Site Request Forgery)
+**Severity:** High (Active Security Vulnerability)
+**Why:** The admin panel lacks CSRF protection. An attacker could craft a hidden form on a malicious site that, if visited by a logged-in admin, silently deletes groups or changes registration data.
+
+### How to Fix: CSRF Tokens
+1.  **Generate**: On [admin_login](file:///Users/fredng/projects/OnlineRegistration/includes/auth.php#19-42), store a token: `$_SESSION['csrf_token'] = bin2hex(random_bytes(32));`.
+2.  **Embed**: Add a hidden input to every admin form: `<input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">`.
+3.  **Verify**: In every POST handler, verify: `if ($_POST['csrf_token'] !== $_SESSION['csrf_token']) { die('Unauthorized'); }`.
+
+---
+
+## 🟠 HIGH: Concurrency & Capacity Enforcement
+**Severity:** High (Data Integrity / Logistics)
+**Why:** The system calculates availability at the start of the form but doesn't "lock" the spot. Two users could pay for the final remaining spot at the same time.
+
+### How to Fix: Atomic Slot Reservation
+1.  **Check at Finalization**: When the payment is being processed (in the "finalize" function), perform a final count: `SELECT COUNT(*) FROM registrations WHERE status = 'paid' FOR UPDATE`.
+2.  **Strict Limit**: If the count exceeds your hard limit, mark the registration for "Manual Review" or refund it immediately, rather than providing an automatic "Success" message.
+
+---
+
+## 🟡 MEDIUM: Session Security Hardening
+**Severity:** Medium (Security Defense in Depth)
+**Why:** Admin session cookies lack `Secure` and `HttpOnly` flags, making them vulnerable to theft via network sniffing (if HTTP is accidentally used) or XSS.
+
+### How to Fix: Secure Cookie Parameters
+Modify [config.php](file:///Users/fredng/projects/OnlineRegistration/config.php) to set strict session parameters before `session_start()`:
+```php
+session_set_cookie_params([
+    'secure' => true,
+    'httponly' => true,
+    'samesite' => 'Lax'
+]);
+```
+
+---
+
+## 🟡 MEDIUM: SQL Injection Sanitization (Ordering)
+**Severity:** Medium (Security Best Practice)
+**Why:** [admin_get_registrations](file:///Users/fredng/projects/OnlineRegistration/includes/db_helper.php#24-44) accepts raw SQL strings for sorting. This is a fragile pattern that often leads to vulnerabilities during future code updates.
+
+### How to Fix: Whitelist Mapping
+Modify the helper function to accept a simple key (e.g., `'date'`) and map it manually to a hardcoded SQL fragment:
+```php
+$sorts = ['date' => 'r.created_at DESC', 'name' => 'r.parent_last_name ASC'];
+$order_clause = $sorts[$input_sort_key] ?? 'r.id DESC';
+```
+
+---
+
+## 🔵 LOW: Logic Duplication / Maintainability
+**Severity:** Low (Technical Debt)
+**Why:** Payment finalization logic is currently split between [success.php](file:///Users/fredng/projects/OnlineRegistration/success.php) and [stripe-webhook.php](file:///Users/fredng/projects/OnlineRegistration/stripe-webhook.php). 
+
+### How to Fix: Service Layer
+Extract all database-specific logic into [includes/db_helper.php](file:///Users/fredng/projects/OnlineRegistration/includes/db_helper.php) so that the main page files only handle the user interface and basic routing.

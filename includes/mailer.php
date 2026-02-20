@@ -43,7 +43,7 @@ function send_registration_confirmation_email(PDO $pdo, array $registration): bo
     $parent_name = trim($registration['parent_first_name'] . ' ' . $registration['parent_last_name']);
     $total_str   = format_money(((int) $registration['total_amount_cents']) / 100.0);
 
-    $template_path = dirname(__DIR__) . '/vbs-email-.html';
+    $template_path = dirname(__DIR__) . '/vbs-email.html';
     if (!file_exists($template_path)) {
         app_log('high', 'Email', 'Email template file not found', [
             'path'            => $template_path,
