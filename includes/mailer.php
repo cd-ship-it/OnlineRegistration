@@ -75,8 +75,10 @@ function send_registration_confirmation_email(PDO $pdo, array $registration): bo
         '{{event_end_time}}'    => htmlspecialchars($settings['event_end_time']   ?? ''),
     ];
 
-    $body      = strtr($template, $replacements);
-    $reply_to  = 'cm@crosspointchurchsv.org';
+    $body     = strtr($template, $replacements);
+    $reply_to = function_exists('env')
+        ? env('reply_to', 'cmmp@crosspointchurchsv.org')
+        : 'cmmp@crosspointchurchsv.org';
     $headers   = implode("\r\n", [
         'From: Crosspoint Church VBS <' . $reply_to . '>',
         'Reply-To: ' . $reply_to,
