@@ -1,4 +1,6 @@
 .env
+*.swp
+/.*.swp
 /vendor/
 /client_secret.json
 /node_modules/

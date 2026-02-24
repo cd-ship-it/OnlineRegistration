@@ -75,20 +75,37 @@ function send_registration_confirmation_email(PDO $pdo, array $registration): bo
         '{{event_end_time}}'    => htmlspecialchars($settings['event_end_time']   ?? ''),
     ];
 
-    $body     = strtr($template, $replacements);
-    $reply_to = function_exists('env')
-        ? env('reply_to', 'cmmp@crosspointchurchsv.org')
+    $body        = strtr($template, $replacements);
+    $reply_to_raw = function_exists('env')
+        ? (string) env('reply_to', 'cmmp@crosspointchurchsv.org')
         : 'cmmp@crosspointchurchsv.org';
+    $reply_to_list = array_values(array_filter(array_map('trim', explode(',', $reply_to_raw)), function ($email) {
+        return $email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL);
+    }));
+    $from_email = $reply_to_list[0] ?? 'cmmp@crosspointchurchsv.org';
+    $reply_to   = !empty($reply_to_list) ? implode(', ', $reply_to_list) : $from_email;
+    $return_path = function_exists('env')
+        ? env('return_path', 'cd@crosspointchurchsv.org')
+        : 'cd@crosspointchurchsv.org';
     $headers   = implode("\r\n", [
-        'From: Crosspoint Church VBS <' . $reply_to . '>',
+        'From: Crosspoint Church VBS <' . $from_email . '>',
         'Reply-To: ' . $reply_to,
+        'Return-Path: ' . $return_path,
         'Cc: cd@crosspointchurchsv.org',
         'MIME-Version: 1.0',
         'Content-Type: text/html; charset=UTF-8',
         'X-Mailer: PHP/' . phpversion(),
     ]);
 
-    $sent = mail($to, $subject, $body, $headers);
+    $mail_params = null;
+    $return_path = trim((string) $return_path);
+    if ($return_path !== '' && filter_var($return_path, FILTER_VALIDATE_EMAIL)) {
+        $mail_params = '-f ' . escapeshellarg($return_path);
+    }
+
+    $sent = $mail_params !== null
+        ? mail($to, $subject, $body, $headers, $mail_params)
+        : mail($to, $subject, $body, $headers);
     $now  = (new DateTimeImmutable('now', new DateTimeZone('America/Los_Angeles')))->format('Y-m-d H:i:s T');
 
     if ($sent) {
