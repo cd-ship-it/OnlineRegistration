@@ -85,7 +85,14 @@ function layout_footer() {
     $year = date('Y');
     ?>
 
-  <div class="mt-10 flex justify-center">
+<div class="mt-0 flex justify-center">
+Questions? Email: <a href="mailto:cd@crosspointchurchsv.org" class="text-emerald-700 underline">com@crosspointchurchsv.org</a>
+    </div>
+  <div class="mt-4 flex justify-center">
+  
+    <p class="text-xs sm:text-sm text-gray-600 mb-2">
+      
+    </p>
     <img src="https://crosspointchurchsv.org/branding/logos/Xpt-ID2015-1_1400x346.png" alt="Crosspoint Church" class="max-w-xs sm:max-w-md h-auto" width="250">
   </div>
 <footer class="mt-auto py-6 text-center text-sm text-gray-500">
