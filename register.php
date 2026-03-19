@@ -670,7 +670,8 @@ $card_img = rtrim(parse_url(APP_URL, PHP_URL_PATH) ?: '', '/') . '/img/email_her
             <label for="address"
               class="block text-sm font-medium text-gray-700 mb-1">Address<?= req_star('address') ?></label>
             <input type="text" id="address" name="address" <?= req('address') ?>
-              value="<?= htmlspecialchars($form['address']) ?>" class="input-field">
+              value="<?= htmlspecialchars($form['address']) ?>" class="input-field" autocomplete="off"
+              placeholder="Start typing to search for your address">
           </div>
           <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
@@ -1026,6 +1027,17 @@ $card_img = rtrim(parse_url(APP_URL, PHP_URL_PATH) ?: '', '/') . '/img/email_her
     }
   }
 </style>
+<?php if (defined('GOOGLE_MAPS_API_KEY') && GOOGLE_MAPS_API_KEY !== ''): ?>
+<script>
+  window.initAddressAutocomplete = function () {
+    var input = document.getElementById('address');
+    if (!input || !window.google || !window.google.maps || !window.google.maps.places) return;
+    var autocomplete = new google.maps.places.Autocomplete(input, { types: ['address'] });
+    autocomplete.setComponentRestrictions({ country: ['us'] });
+  };
+</script>
+<script src="https://maps.googleapis.com/maps/api/js?key=<?= htmlspecialchars(GOOGLE_MAPS_API_KEY) ?>&libraries=places&callback=initAddressAutocomplete" async defer></script>
+<?php endif; ?>
 <script src="<?= rtrim(parse_url(APP_URL, PHP_URL_PATH) ?: '', '/') ?>/js/review-helpers.js"></script>
 <script>
   (function () {

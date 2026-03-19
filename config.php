@@ -50,6 +50,7 @@ define('ADMIN_PASSWORD_HASH', env('ADMIN_PASSWORD_HASH', ''));
 define('GOOGLE_CLIENT_ID', env('GOOGLE_CLIENT_ID', ''));
 define('GOOGLE_CLIENT_SECRET', env('GOOGLE_CLIENT_SECRET', ''));
 define('GOOGLE_REDIRECT_URL', APP_URL . '/admin/google-callback');
+define('GOOGLE_MAPS_API_KEY', trim(env('GOOGLE_MAPS_API_KEY', '')));
 define('ADMIN_WHITELIST', env('ADMIN_WHITELIST', 'fng@crosspointchurchsv.org'));
 
 
