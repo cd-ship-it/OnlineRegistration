@@ -87,15 +87,27 @@ function send_registration_confirmation_email(PDO $pdo, array $registration): bo
     $return_path = function_exists('env')
         ? env('return_path', 'cd@crosspointchurchsv.org')
         : 'cd@crosspointchurchsv.org';
-    $headers   = implode("\r\n", [
+
+    $cc_raw = function_exists('env')
+        ? (string) env('cc', 'cd@crosspointchurchsv.org')
+        : 'cd@crosspointchurchsv.org';
+    $cc_list = array_values(array_filter(array_map('trim', explode(',', $cc_raw)), function ($email) {
+        return $email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL);
+    }));
+
+    $headers_arr = [
         'From: Crosspoint Church VBS <' . $from_email . '>',
         'Reply-To: ' . $reply_to,
         'Return-Path: ' . $return_path,
-        'Cc: cd@crosspointchurchsv.org',
-        'MIME-Version: 1.0',
-        'Content-Type: text/html; charset=UTF-8',
-        'X-Mailer: PHP/' . phpversion(),
-    ]);
+    ];
+    if (!empty($cc_list)) {
+        $headers_arr[] = 'Cc: ' . implode(', ', $cc_list);
+    }
+    $headers_arr[] = 'MIME-Version: 1.0';
+    $headers_arr[] = 'Content-Type: text/html; charset=UTF-8';
+    $headers_arr[] = 'X-Mailer: PHP/' . phpversion();
+
+    $headers = implode("\r\n", $headers_arr);
 
     $mail_params = null;
     $return_path = trim((string) $return_path);
