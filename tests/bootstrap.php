@@ -6,8 +6,9 @@
  * (which reads from .env) is bypassed.  All values target the local dev
  * MySQL instance used by the existing test_pricing.php script.
  *
- * Run the pending migration before executing the suite:
+ * Run pending migrations before executing the suite, e.g.:
  *   mysql -u root -proot crossp11_db1 < migrations/add_confirmation_email_sent.sql
+ *   mysql -u root -proot crossp11_db1 < migrations/add_withdraw_to_registration_kids.sql
  */
 
 declare(strict_types=1);

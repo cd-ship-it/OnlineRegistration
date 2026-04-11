@@ -18,7 +18,8 @@ $valid_sort_keys = ['parent', 'email', 'kids', 'photo', 'status', 'date'];
 $sort_key = in_array($sort, $valid_sort_keys, true) ? $sort : 'date';
 
 $registrations = admin_get_registrations($pdo, $status_filter, $sort, $dir);
-$all_kids      = admin_get_kids_list($pdo, $status_filter);
+$show_withdrew = isset($_GET['show_withdrew']) && $_GET['show_withdrew'] === '1';
+$all_kids      = admin_get_kids_list($pdo, $status_filter, $show_withdrew);
 
 function sort_url($list_url, $status_filter, $sort, $dir, $column) {
     $params = [];
@@ -26,6 +27,18 @@ function sort_url($list_url, $status_filter, $sort, $dir, $column) {
     $params['sort'] = $column;
     $params['dir'] = ($sort === $column && $dir === 'asc') ? 'desc' : 'asc';
     return $list_url . '?' . http_build_query($params);
+}
+
+/** Current list query string (status, sort, dir) for preserving view state on other links. */
+function registrations_current_list_params(string $status_filter, string $sort_key, string $dir): array
+{
+    $params = [];
+    if ($status_filter !== '') {
+        $params['status'] = $status_filter;
+    }
+    $params['sort'] = $sort_key;
+    $params['dir'] = $dir;
+    return $params;
 }
 
 $csv = isset($_GET['export']) && $_GET['export'] === 'csv';
@@ -113,7 +126,20 @@ admin_nav('registrations');
             ?>
             <span class="px-2 py-1 rounded text-xs font-medium <?= $pc_bg ?>"><?= $pc_text ?></span>
           </td>
-          <td class="px-4 py-3"><span class="px-2 py-0.5 rounded text-xs <?= $r['status'] === 'paid' ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-700' ?>"><?= htmlspecialchars($r['status']) ?></span></td>
+          <td class="px-4 py-3"><?php
+            $st = $r['status'] ?? '';
+            $n_withdrew = isset($r['kids_withdrew_count']) ? (int) $r['kids_withdrew_count'] : 0;
+            if ($st === 'paid' && $n_withdrew > 0) {
+              $wrote_label = $n_withdrew === 1 ? '1 kid withdrew' : $n_withdrew . ' kids withdrew';
+              ?>
+              <span class="px-2 py-0.5 rounded text-xs bg-amber-100 text-amber-900" title="Payment status: paid"><?= htmlspecialchars($wrote_label) ?></span>
+              <?php
+            } else {
+              ?>
+              <span class="px-2 py-0.5 rounded text-xs <?= $st === 'paid' ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-700' ?>"><?= htmlspecialchars($st) ?></span>
+              <?php
+            }
+          ?></td>
           <td class="px-4 py-3 text-sm text-gray-600"><?= $r['created_at'] ? date('M j, Y g:i A', strtotime($r['created_at'])) : '—' ?></td>
         </tr>
         <?php endforeach; ?>
@@ -167,6 +193,14 @@ admin_nav('registrations');
         <?php endforeach; ?>
       </select>
       <button type="button" id="filter-clear" class="btn-secondary text-sm py-1.5 px-3 shrink-0">Clear</button>
+      <?php
+        $list_qp = registrations_current_list_params($status_filter, $sort_key, $dir);
+        $withdrew_toggle_href = $list_url . '?' . http_build_query(
+            $show_withdrew ? $list_qp : array_merge($list_qp, ['show_withdrew' => '1'])
+        );
+        $withdrew_toggle_label = $show_withdrew ? 'Hide withdrew kids' : 'Show Withdrew Kids';
+      ?>
+      <a href="<?= htmlspecialchars($withdrew_toggle_href) ?>" id="show-withdrew-link" class="shrink-0 text-xs text-gray-500 hover:text-gray-700 underline decoration-gray-300 hover:decoration-gray-500 underline-offset-2"><?= htmlspecialchars($withdrew_toggle_label) ?></a>
       <span id="filter-count" class="shrink-0 text-sm text-gray-500 whitespace-nowrap"></span>
     </div>
     <div class="card overflow-x-auto p-0">
@@ -200,15 +234,20 @@ admin_nav('registrations');
             $row_child  = strtolower(trim(($k['first_name'] ?? '') . ' ' . ($k['last_name'] ?? '')));
             $row_parent = strtolower(trim(($k['parent_first_name'] ?? '') . ' ' . ($k['parent_last_name'] ?? '')));
           ?>
-          <tr class="border-b border-gray-100 hover:bg-gray-50/50"
+          <?php $is_withdrew = isset($k['withdraw']) && (string) $k['withdraw'] === '1'; ?>
+          <tr class="border-b border-gray-100 hover:bg-gray-50/50 <?= $is_withdrew ? 'bg-gray-50/70' : '' ?>"
               data-group="<?= htmlspecialchars($row_group) ?>"
               data-age="<?= htmlspecialchars($row_age) ?>"
               data-gender="<?= htmlspecialchars($row_gender_display) ?>"
               data-grade="<?= htmlspecialchars($row_grade) ?>"
               data-child="<?= htmlspecialchars($row_child) ?>"
-              data-parent="<?= htmlspecialchars($row_parent) ?>">
+              data-parent="<?= htmlspecialchars($row_parent) ?>"
+              data-withdrew="<?= $is_withdrew ? '1' : '0' ?>">
             <td class="px-4 py-3">
               <a href="<?= $kid_view_url ?>" class="text-indigo-600 hover:underline font-medium"><?= htmlspecialchars(($k['first_name'] ?? '') . ' ' . ($k['last_name'] ?? '')) ?></a>
+              <?php if ($is_withdrew): ?>
+                <span class="ml-1.5 text-xs font-medium text-gray-500 uppercase tracking-wide">Withdrew</span>
+              <?php endif; ?>
             </td>
             <td class="px-4 py-3 text-sm">
               <?php if (!empty($k['group_name'])): ?>

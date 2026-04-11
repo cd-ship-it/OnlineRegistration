@@ -3,12 +3,14 @@
   "private": true,
   "scripts": {
     "build": "tailwindcss -i ./css/input.css -o ./css/app.css --minify",
-    "dev":   "tailwindcss -i ./css/input.css -o ./css/app.css --watch",
-    "test":  "jest"
+    "dev": "tailwindcss -i ./css/input.css -o ./css/app.css --watch",
+    "test": "jest"
   },
   "jest": {
     "testEnvironment": "jsdom",
-    "testMatch": ["**/tests/**/*.test.js"]
+    "testMatch": [
+      "**/tests/**/*.test.js"
+    ]
   },
   "devDependencies": {
     "jest": "^29.7.0",

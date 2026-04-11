@@ -53,11 +53,15 @@ function admin_get_registrations(
     $order_sql = str_replace('{dir}', $dir, $template);
 
     $db = db_prefix();
+    $status_clause = ($status_filter === 'draft') ? "r.status = 'draft'" : "r.status = 'paid'";
+
     $q  = "SELECT r.*, (SELECT COUNT(*) FROM {$db}registration_kids k 
-                         JOIN {$db}registrations r2 ON r2.id = k.registration_id AND r2.status = 'paid'
-                         WHERE k.registration_id = r.id) AS kid_count
+                         WHERE k.registration_id = r.id
+                           AND (k.withdraw IS NULL OR k.withdraw <> '1')) AS kid_count,
+                  (SELECT COUNT(*) FROM {$db}registration_kids k2
+                         WHERE k2.registration_id = r.id AND k2.withdraw = '1') AS kids_withdrew_count
            FROM {$db}registrations r
-           WHERE r.status = 'paid'";
+           WHERE {$status_clause}";
     $params = [];
     $q .= ' ORDER BY ' . $order_sql;
     $stmt = $pdo->prepare($q);
@@ -66,17 +70,28 @@ function admin_get_registrations(
 }
 
 /**
- * Return all kids joined with their registration and group, optionally filtered by status.
+ * Return all kids joined with their registration and group.
+ *
+ * @param string $status_filter    Same as admin registrations list: '' or anything other than 'draft' → paid only; 'draft' → draft only.
+ * @param bool   $include_withdrawn When true, include kids with withdraw = '1' (default: exclude them).
  */
-function admin_get_kids_list(PDO $pdo, string $status_filter): array
+function admin_get_kids_list(PDO $pdo, string $status_filter, bool $include_withdrawn = false): array
 {
-    $db = db_prefix();
-    $q  = "SELECT k.*, r.parent_first_name, r.parent_last_name, r.status AS reg_status, g.name AS group_name
+    $db            = db_prefix();
+    $reg_status_on = ($status_filter === 'draft') ? "r.status = 'draft'" : "r.status = 'paid'";
+    $q             = "SELECT k.*, r.parent_first_name, r.parent_last_name, r.status AS reg_status, g.name AS group_name
            FROM {$db}registration_kids k
-           JOIN {$db}registrations r ON r.id = k.registration_id AND r.status = 'paid'
+           JOIN {$db}registrations r ON r.id = k.registration_id AND {$reg_status_on}
            LEFT JOIN {$db}groups g ON g.id = k.group_id";
+    if (!$include_withdrawn) {
+        $q .= " WHERE (k.withdraw IS NULL OR k.withdraw <> '1')";
+    }
     $params = [];
-    $q .= ' ORDER BY k.last_name, k.first_name';
+    if ($include_withdrawn) {
+        $q .= ' ORDER BY (IFNULL(k.withdraw, \'0\') = \'1\') DESC, k.last_name, k.first_name';
+    } else {
+        $q .= ' ORDER BY k.last_name, k.first_name';
+    }
     $stmt = $pdo->prepare($q);
     $stmt->execute($params);
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -106,6 +121,22 @@ function admin_get_registration_kids(PDO $pdo, int $id): array
                             WHERE k.registration_id = ? ORDER BY k.sort_order, k.id");
     $stmt->execute([$id]);
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+/**
+ * Mark a child as withdrawn (and clear group assignment). Verifies paid registration.
+ */
+function admin_withdraw_kid(PDO $pdo, int $registration_id, int $kid_id): bool
+{
+    $db = db_prefix();
+    $stmt = $pdo->prepare(
+        "UPDATE {$db}registration_kids k
+         INNER JOIN {$db}registrations r ON r.id = k.registration_id AND r.status = 'paid'
+         SET k.withdraw = '1', k.group_id = NULL
+         WHERE k.id = ? AND k.registration_id = ?"
+    );
+    $stmt->execute([$kid_id, $registration_id]);
+    return $stmt->rowCount() > 0;
 }
 
 // ─── Admin: Settings (admin/settings.php) ─────────────────────────────────────
@@ -198,7 +229,8 @@ function groups_get_kid_counts(PDO $pdo, array $group_ids): array
     $rows = $pdo->query("SELECT k.group_id, COUNT(*) AS cnt 
                          FROM {$db}registration_kids k
                          JOIN {$db}registrations r ON r.id = k.registration_id AND r.status = 'paid'
-                         WHERE k.group_id IN ($in) GROUP BY k.group_id")
+                         WHERE k.group_id IN ($in)
+                           AND (k.withdraw IS NULL OR k.withdraw <> '1') GROUP BY k.group_id")
                 ->fetchAll(PDO::FETCH_ASSOC);
     $map  = [];
     foreach ($rows as $r) {
@@ -526,6 +558,7 @@ function ag_get_kids(PDO $pdo, string $db): array
                r.home_church
         FROM {$db}registration_kids k
         JOIN {$db}registrations r ON r.id = k.registration_id AND r.status = 'paid'
+        WHERE (k.withdraw IS NULL OR k.withdraw <> '1')
         ORDER BY k.age, k.date_of_birth, k.last_grade_completed,
                  k.last_name, k.first_name
     ")->fetchAll(PDO::FETCH_ASSOC);
@@ -585,7 +618,8 @@ function ag_auto_assign_by_grade(
     $kids_list = $pdo
         ->query("SELECT k.id, k.last_grade_completed 
                  FROM {$db}registration_kids k
-                 JOIN {$db}registrations r ON r.id = k.registration_id AND r.status = 'paid'")
+                 JOIN {$db}registrations r ON r.id = k.registration_id AND r.status = 'paid'
+                 WHERE (k.withdraw IS NULL OR k.withdraw <> '1')")
         ->fetchAll(PDO::FETCH_ASSOC);
 
     // Append any grades found in the DB that aren't in the predefined order

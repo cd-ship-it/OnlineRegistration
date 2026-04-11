@@ -62,6 +62,7 @@ CREATE TABLE IF NOT EXISTS `registration_kids` (
   `emergency_contact_relationship` varchar(50) DEFAULT NULL,
   `medical_allergy_info` text,
   `sort_order` smallint unsigned NOT NULL DEFAULT 0,
+  `withdraw` char(1) NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`),
   KEY `idx_registration_id` (`registration_id`),
   KEY `idx_group_id` (`group_id`),
