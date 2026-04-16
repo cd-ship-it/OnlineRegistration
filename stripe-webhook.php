@@ -38,7 +38,8 @@ if ($event->type === 'checkout.session.completed') {
     if ($reg_id > 0) {
         // Atomically finalize payment and send the confirmation email if this
         // process wins the claim (idempotent — safe if success.php fires first).
-        payment_finalize_and_notify($pdo, $reg_id, $session->id);
+        $stripe_amount_cents = isset($session->amount_total) ? (int) $session->amount_total : null;
+        payment_finalize_and_notify($pdo, $reg_id, $session->id, $stripe_amount_cents);
     }
 }
 

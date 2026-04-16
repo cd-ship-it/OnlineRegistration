@@ -27,7 +27,8 @@ if ($session && $session->payment_status === 'paid' && !empty($session->metadata
 
   // Atomically finalize payment and send the confirmation email if this
   // process wins the claim (idempotent — safe if webhook fires first).
-  payment_finalize_and_notify($pdo, $reg_id, $session_id);
+  $stripe_amount_cents = isset($session->amount_total) ? (int) $session->amount_total : null;
+  payment_finalize_and_notify($pdo, $reg_id, $session_id, $stripe_amount_cents);
 
   // Always load the registration for the thank-you page, regardless of who sent the email.
   $registration = success_get_registration_with_kids($pdo, $reg_id);

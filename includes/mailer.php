@@ -19,9 +19,9 @@
  * @param int    $reg_id     Registration ID from Stripe session metadata.
  * @param string $session_id Stripe Checkout Session ID (stored for idempotency).
  */
-function payment_finalize_and_notify(PDO $pdo, int $reg_id, string $session_id): void
+function payment_finalize_and_notify(PDO $pdo, int $reg_id, string $session_id, ?int $amount_total_cents = null): void
 {
-    $email_data = registration_finalize_payment($pdo, $reg_id, $session_id);
+    $email_data = registration_finalize_payment($pdo, $reg_id, $session_id, $amount_total_cents);
     if ($email_data !== null && defined('APP_ENV') && APP_ENV === 'production') {
         send_registration_confirmation_email($pdo, $email_data);
     }

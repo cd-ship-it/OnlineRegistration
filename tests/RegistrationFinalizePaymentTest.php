@@ -215,6 +215,39 @@ final class RegistrationFinalizePaymentTest extends TestCase
         $this->assertCount(0, $result['kids'], 'No kids were inserted — should be empty array');
     }
 
+    /**
+     * When a Stripe promotion code reduces the amount, the actual charged
+     * amount must be persisted in total_amount_cents.
+     */
+    #[Test]
+    public function amountTotalCentsUpdatesTotalWhenPromotionCodeApplied(): void
+    {
+        $id = $this->insertRegistration(['total_amount_cents' => 5000]);
+
+        $result = registration_finalize_payment($this->pdo(), $id, 'cs_test_promo', 3500);
+
+        $this->assertIsArray($result);
+        $row = $this->fetchRow($id);
+        $this->assertSame(3500, (int) $row['total_amount_cents'],
+            'total_amount_cents must reflect the discounted Stripe amount');
+    }
+
+    /**
+     * When amount_total_cents is null (no promo code info available),
+     * the original total_amount_cents must remain unchanged.
+     */
+    #[Test]
+    public function nullAmountTotalCentsLeavesOriginalTotalUnchanged(): void
+    {
+        $id = $this->insertRegistration(['total_amount_cents' => 5000]);
+
+        registration_finalize_payment($this->pdo(), $id, 'cs_test_no_promo');
+
+        $row = $this->fetchRow($id);
+        $this->assertSame(5000, (int) $row['total_amount_cents'],
+            'total_amount_cents must stay at the original value when no Stripe amount is provided');
+    }
+
     // ==================================================================
     // payment_finalize_and_notify() — 4 tests
     //

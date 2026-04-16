@@ -845,7 +845,7 @@ $card_img = rtrim(parse_url(APP_URL, PHP_URL_PATH) ?: '', '/') . '/img/email_her
             <?php endforeach; ?>
           </div>
           <div class="flex justify-end mt-4">
-            <button type="button" id="add-kid" class="btn-orange text-sm" disabled>+ Add Child</button>
+            <button type="button" id="add-kid" class="btn-orange text-sm" disabled>+ Add another child</button>
           </div>
         </div>
         <div class="flex flex-wrap gap-4 justify-between items-center">

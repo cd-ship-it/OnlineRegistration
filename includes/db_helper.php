@@ -267,7 +267,7 @@ function groups_get_volunteer(PDO $pdo, int $vid): ?array
  * @return array|null  Registration data when the caller should send the email;
  *                     null when the email was already claimed by another process.
  */
-function registration_finalize_payment(PDO $pdo, int $reg_id, string $session_id): ?array
+function registration_finalize_payment(PDO $pdo, int $reg_id, string $session_id, ?int $amount_total_cents = null): ?array
 {
     $db  = db_prefix();
     $now = date('Y-m-d H:i:s');
@@ -298,6 +298,13 @@ function registration_finalize_payment(PDO $pdo, int $reg_id, string $session_id
                  SET status = 'paid', stripe_session_id = ?, updated_at = ?
                  WHERE id = ?"
             )->execute([$session_id, $now, $reg_id]);
+        }
+
+        // Sync total with what Stripe actually charged (reflects promotion codes)
+        if ($amount_total_cents !== null && $amount_total_cents >= 0) {
+            $pdo->prepare(
+                "UPDATE {$db}registrations SET total_amount_cents = ?, updated_at = ? WHERE id = ?"
+            )->execute([$amount_total_cents, $now, $reg_id]);
         }
 
         // Check whether another process already claimed the email send
